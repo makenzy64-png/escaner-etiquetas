@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Escáner de Etiquetas</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #1D9E75; --green-dark: #0F6E56; --green-light: #EAF3DE; --green-text: #3B6D11;
+    --amber-light: #FAEEDA; --amber-text: #854F0B;
+    --red-light: #FCEBEB; --red-text: #A32D2D;
+    --bg: #f5f5f0; --card: #ffffff; --border: rgba(0,0,0,0.12);
+    --text: #1a1a18; --text2: #666660; --mono: 'Courier New', monospace;
+  }
+  html, body { height: 100%; background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text); }
+  body { padding: 0; overflow-x: hidden; }
+
+  header { background: var(--green); color: #fff; padding: 14px 16px 12px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 6px rgba(0,0,0,0.2); }
+  header svg { flex-shrink: 0; }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header p { font-size: 11px; opacity: 0.8; }
+
+  main { padding: 12px; display: flex; flex-direction: column; gap: 12px; max-width: 520px; margin: 0 auto; }
+
+  .card { background: var(--card); border-radius: 14px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .card-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text2); margin-bottom: 10px; }
+
+  /* CAMERA */
+  #cam-wrap { position: relative; border-radius: 10px; overflow: hidden; background: #111; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; }
+  #video { width: 100%; height: 100%; object-fit: cover; display: none; }
+  #canvas-hidden { display: none; }
+  .cam-idle { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #666; }
+  .cam-idle svg { opacity: 0.35; }
+  .cam-idle span { font-size: 13px; }
+  .finder { position: absolute; inset: 18%; border: 2px solid rgba(29,158,117,0.75); border-radius: 8px; display: none; }
+  .corner { position: absolute; width: 18px; height: 18px; }
+  .corner-tl { top: -2px; left: -2px; border-top: 3px solid #1D9E75; border-left: 3px solid #1D9E75; border-radius: 3px 0 0 0; }
+  .corner-tr { top: -2px; right: -2px; border-top: 3px solid #1D9E75; border-right: 3px solid #1D9E75; border-radius: 0 3px 0 0; }
+  .corner-bl { bottom: -2px; left: -2px; border-bottom: 3px solid #1D9E75; border-left: 3px solid #1D9E75; border-radius: 0 0 0 3px; }
+  .corner-br { bottom: -2px; right: -2px; border-bottom: 3px solid #1D9E75; border-right: 3px solid #1D9E75; border-radius: 0 0 3px 0; }
+  .scan-line { position: absolute; left: 18%; right: 18%; height: 2px; background: linear-gradient(90deg, transparent, #1D9E75, transparent); display: none; animation: scanmove 1.8s ease-in-out infinite; }
+  @keyframes scanmove { 0%,100% { top: 20%; } 50% { top: 78%; } }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+  .btn { flex: 1; padding: 11px 8px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); background: #f0f0ea; color: var(--text); transition: all 0.12s; -webkit-tap-highlight-color: transparent; }
+  .btn:active { transform: scale(0.97); }
+  .btn.primary { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn.primary:active { background: var(--green-dark); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.danger { background: var(--red-light); color: var(--red-text); border-color: transparent; }
+
+  /* STATUS */
+  .status { font-size: 12px; padding: 7px 10px; border-radius: 8px; margin-top: 8px; display: none; font-weight: 500; }
+  .status.scan { background: var(--amber-light); color: var(--amber-text); }
+  .status.ok { background: var(--green-light); color: var(--green-text); }
+  .status.err { background: var(--red-light); color: var(--red-text); }
+
+  /* RESULTS */
+  .res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .res-box { }
+  .res-lbl { font-size: 11px; color: var(--text2); margin-bottom: 4px; font-weight: 500; }
+  .res-val { font-family: var(--mono); font-size: 20px; font-weight: 700; background: #f5f5f0; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); min-height: 42px; display: flex; align-items: center; color: var(--green-dark); }
+  .res-val.empty { font-size: 12px; color: #aaa; font-family: inherit; font-weight: 400; }
+  .ocr-box { font-family: var(--mono); font-size: 11px; background: #f5f5f0; padding: 7px 10px; border-radius: 8px; color: var(--text2); word-break: break-all; min-height: 32px; line-height: 1.5; border: 1px solid var(--border); }
+  .manual-row { display: flex; gap: 8px; margin-top: 10px; }
+  .manual-row input { flex: 1; padding: 9px 10px; border-radius: 9px; border: 1.5px solid var(--border); background: #fafaf8; font-size: 14px; font-family: var(--mono); color: var(--text); -webkit-appearance: none; }
+  .manual-row input:focus { outline: none; border-color: var(--green); }
+  .save-btn { padding: 9px 16px; border-radius: 9px; background: var(--green); color: #fff; font-size: 14px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+  .save-btn:active { background: var(--green-dark); transform: scale(0.97); }
+
+  /* TABLE */
+  .table-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .table-header .card-label { margin: 0; }
+  .tbl-actions { display: flex; gap: 6px; }
+  .tbl-btn { padding: 5px 11px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1.5px solid var(--border); background: #f0f0ea; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .tbl-btn.export { background: var(--green); color: #fff; border-color: var(--green); }
+  .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #f5f5f0; padding: 7px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); border-bottom: 1px solid var(--border); }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+  td.date { font-family: inherit; font-size: 11px; color: var(--text2); }
+  tr:last-child td { border-bottom: none; }
+  tr.new-row td { background: #EAF3DE; animation: faderow 2s forwards; }
+  @keyframes faderow { to { background: transparent; } }
+  .empty-msg { text-align: center; padding: 20px; color: var(--text2); font-size: 13px; font-family: inherit; }
+
+  /* PROGRESS */
+  .progress-wrap { height: 3px; background: #e0e0d8; border-radius: 2px; margin-top: 8px; display: none; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--green); border-radius: 2px; width: 0%; transition: width 0.3s; }
+
+  /* FOOTER */
+  footer { text-align: center; padding: 16px 12px 24px; font-size: 11px; color: #bbb; }
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h2v2h-2z"/><path d="M18 14h3v3h-3z"/><path d="M14 18h2v3h-2z"/></svg>
+  <div>
+    <h1>Escáner de Etiquetas</h1>
+    <p>OCR · Logística y depósito</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- CAMERA CARD -->
+  <div class="card">
+    <div class="card-label">Cámara</div>
+    <div id="cam-wrap">
+      <div class="cam-idle" id="cam-idle">
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span>Tocá "Activar cámara"</span>
+      </div>
+      <video id="video" autoplay playsinline muted></video>
+      <div class="finder" id="finder">
+        <div class="corner corner-tl"></div>
+        <div class="corner corner-tr"></div>
+        <div class="corner corner-bl"></div>
+        <div class="corner corner-br"></div>
+      </div>
+      <div class="scan-line" id="scan-line"></div>
+    </div>
+    <canvas id="canvas-hidden"></canvas>
+    <div class="progress-wrap" id="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    <div class="btn-row">
+      <button class="btn" id="btn-cam">Activar cámara</button>
+      <button class="btn primary" id="btn-scan" disabled>📷 Escanear</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <!-- RESULTS CARD -->
+  <div class="card">
+    <div class="card-label">Resultado detectado</div>
+    <div class="res-grid">
+      <div class="res-box">
+        <div class="res-lbl">Código (4 dígitos)</div>
+        <div class="res-val empty" id="res-code">–</div>
+      </div>
+      <div class="res-box">
+        <div class="res-lbl">Número de pallet</div>
+        <div class="res-val empty" id="res-pallet">–</div>
+      </div>
+    </div>
+    <div class="res-lbl" style="margin-bottom:5px">Texto OCR detectado</div>
+    <div class="ocr-box" id="ocr-raw">Escaneá una etiqueta para ver el texto detectado…</div>
+    <div class="manual-row">
+      <input type="text" id="inp-code" placeholder="Código" maxlength="10" inputmode="numeric">
+      <input type="text" id="inp-pallet" placeholder="Nº Pallet" maxlength="10" inputmode="numeric">
+      <button class="save-btn" id="btn-save">Guardar</button>
+    </div>
+  </div>
+
+  <!-- TABLE CARD -->
+  <div class="card">
+    <div class="table-header">
+      <div class="card-label">Registros <span id="count" style="font-weight:400;color:var(--text2)">(0)</span></div>
+      <div class="tbl-actions">
+        <button class="tbl-btn" id="btn-clear">Limpiar</button>
+        <button class="tbl-btn export" id="btn-export">⬇ Excel</button>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Código</th><th>Pallet</th><th>Fecha / Hora</th></tr></thead>
+        <tbody id="tbody">
+          <tr><td colspan="4" class="empty-msg">Sin registros aún</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<footer>Funciona offline · Los datos se guardan localmente</footer>
+
+<!-- TESSERACT -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<!-- XLSX -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+const records = JSON.parse(localStorage.getItem('etiquetas') || '[]');
+let stream = null, worker = null, isScanning = false;
+
+const video = document.getElementById('video');
+const canvasHidden = document.getElementById('canvas-hidden');
+const ctx = canvasHidden.getContext('2d');
+const btnCam = document.getElementById('btn-cam');
+const btnScan = document.getElementById('btn-scan');
+const btnSave = document.getElementById('btn-save');
+const btnClear = document.getElementById('btn-clear');
+const btnExport = document.getElementById('btn-export');
+const resCode = document.getElementById('res-code');
+const resPallet = document.getElementById('res-pallet');
+const ocrRaw = document.getElementById('ocr-raw');
+const statusEl = document.getElementById('status');
+const inpCode = document.getElementById('inp-code');
+const inpPallet = document.getElementById('inp-pallet');
+const tbody = document.getElementById('tbody');
+const count = document.getElementById('count');
+const finder = document.getElementById('finder');
+const scanLine = document.getElementById('scan-line');
+const camIdle = document.getElementById('cam-idle');
+const progressWrap = document.getElementById('progress-wrap');
+const progressBar = document.getElementById('progress-bar');
+
+function setStatus(msg, type) {
+  statusEl.textContent = msg;
+  statusEl.className = 'status ' + type;
+  statusEl.style.display = 'block';
+}
+
+function setProgress(pct) {
+  progressWrap.style.display = pct > 0 ? 'block' : 'none';
+  progressBar.style.width = pct + '%';
+}
+
+async function initWorker() {
+  if (worker) return;
+  setStatus('Cargando motor OCR… (solo primera vez)', 'scan');
+  setProgress(10);
+  worker = await Tesseract.createWorker('eng', 1, {
+    logger: m => {
+      if (m.status === 'loading tesseract core') setProgress(20);
+      if (m.status === 'initializing tesseract') setProgress(40);
+      if (m.status === 'loading language traineddata') setProgress(60);
+      if (m.status === 'initializing api') setProgress(80);
+      if (m.status === 'recognizing text') {
+        setStatus('Reconociendo… ' + Math.round(m.progress * 100) + '%', 'scan');
+        setProgress(80 + m.progress * 18);
+      }
+    }
+  });
+  await worker.setParameters({
+    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- '
+  });
+  setProgress(100);
+  setTimeout(() => { setProgress(0); statusEl.style.display = 'none'; }, 800);
+}
+
+// CAMERA
+btnCam.addEventListener('click', async () => {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    video.style.display = 'none';
+    camIdle.style.display = 'flex';
+    finder.style.display = 'none';
+    scanLine.style.display = 'none';
+    btnCam.textContent = 'Activar cámara';
+    btnCam.classList.remove('danger');
+    btnScan.disabled = true;
+    statusEl.style.display = 'none';
+    return;
+  }
+  try {
+    setStatus('Solicitando acceso a la cámara…', 'scan');
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+    });
+    video.srcObject = stream;
+    video.style.display = 'block';
+    camIdle.style.display = 'none';
+    finder.style.display = 'block';
+    scanLine.style.display = 'block';
+    btnCam.textContent = '✕ Detener';
+    btnCam.classList.add('danger');
+    btnScan.disabled = false;
+    statusEl.style.display = 'none';
+    initWorker();
+  } catch(e) {
+    let msg = 'No se pudo acceder a la cámara.';
+    if (e.name === 'NotAllowedError') msg = 'Permiso de cámara denegado. Habilitalo en Ajustes del navegador.';
+    else if (e.name === 'NotFoundError') msg = 'No se encontró cámara en este dispositivo.';
+    setStatus(msg, 'err');
+  }
+});
+
+// PREPROCESS image for better OCR
+function preprocessCanvas(src) {
+  const out = document.createElement('canvas');
+  out.width = src.width;
+  out.height = src.height;
+  const c = out.getContext('2d');
+  c.filter = 'contrast(1.6) brightness(1.15) grayscale(1)';
+  c.drawImage(src, 0, 0);
+  return out;
+}
+
+// EXTRACT data from OCR text
+function extractData(text) {
+  const normalized = text.replace(/[oO]/g, '0').replace(/[lI]/g, '1').replace(/\n/g, ' ');
+  // Code: pattern XXXX-XX- or first 4-digit group
+  let code = '';
+  const m1 = normalized.match(/\b(\d{4})-\d{2}-[A-Z]{2}-/);
+  const m2 = normalized.match(/\b(\d{4})-/);
+  const m3 = normalized.match(/\b(\d{4})\b/);
+  if (m1) code = m1[1];
+  else if (m2) code = m2[1];
+  else if (m3) code = m3[1];
+  // Pallet: "Pallet NNNNNN" or 6-digit number
+  let pallet = '';
+  const p1 = normalized.match(/[Pp]allet\s*[:#]?\s*(\d{5,8})/);
+  const p2 = normalized.match(/\b(\d{6,8})\b/);
+  if (p1) pallet = p1[1];
+  else if (p2) pallet = p2[1];
+  return { code, pallet };
+}
+
+// SCAN
+btnScan.addEventListener('click', async () => {
+  if (isScanning || !stream) return;
+  isScanning = true;
+  btnScan.disabled = true;
+  setStatus('Capturando imagen…', 'scan');
+
+  canvasHidden.width = video.videoWidth || 1280;
+  canvasHidden.height = video.videoHeight || 960;
+  ctx.drawImage(video, 0, 0);
+
+  const processed = preprocessCanvas(canvasHidden);
+
+  try {
+    const { data: { text, confidence } } = await worker.recognize(processed);
+    const clean = text.replace(/\n+/g, ' ').trim();
+    ocrRaw.textContent = clean || '(sin texto detectado)';
+
+    const { code, pallet } = extractData(clean);
+    const conf = Math.round(confidence);
+
+    if (code) { resCode.textContent = code; resCode.classList.remove('empty'); inpCode.value = code; }
+    else { resCode.textContent = '–'; resCode.classList.add('empty'); inpCode.value = ''; }
+    if (pallet) { resPallet.textContent = pallet; resPallet.classList.remove('empty'); inpPallet.value = pallet; }
+    else { resPallet.textContent = '–'; resPallet.classList.add('empty'); inpPallet.value = ''; }
+
+    if (code && pallet) {
+      setStatus(`✓ Datos detectados (confianza: ${conf}%). Revisá y presioná Guardar.`, 'ok');
+    } else if (code || pallet) {
+      setStatus(`Detección parcial (confianza: ${conf}%). Completá el campo faltante.`, 'scan');
+    } else {
+      setStatus('No se detectaron datos. Intentá con mejor iluminación o acercate más.', 'err');
+    }
+    setProgress(0);
+  } catch(e) {
+    setStatus('Error en OCR: ' + e.message, 'err');
+    setProgress(0);
+  }
+
+  isScanning = false;
+  btnScan.disabled = false;
+});
+
+// SAVE
+btnSave.addEventListener('click', () => {
+  const code = inpCode.value.trim();
+  const pallet = inpPallet.value.trim();
+  if (!code || !pallet) { setStatus('Completá código y pallet antes de guardar', 'err'); return; }
+  const now = new Date();
+  const fecha = now.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' })
+    + ' ' + now.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  records.unshift({ code, pallet, fecha });
+  saveLocal();
+  renderTable();
+  inpCode.value = ''; inpPallet.value = '';
+  resCode.textContent = '–'; resCode.classList.add('empty');
+  resPallet.textContent = '–'; resPallet.classList.add('empty');
+  setStatus(`✓ Guardado. Total: ${records.length} registro${records.length !== 1 ? 's' : ''}.`, 'ok');
+});
+
+function saveLocal() {
+  try { localStorage.setItem('etiquetas', JSON.stringify(records.slice(0, 500))); } catch(e) {}
+}
+
+function renderTable() {
+  count.textContent = `(${records.length})`;
+  if (!records.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty-msg">Sin registros aún</td></tr>'; return; }
+  tbody.innerHTML = records.map((r, i) => `
+    <tr class="${i === 0 ? 'new-row' : ''}">
+      <td style="color:#aaa;font-size:11px">${records.length - i}</td>
+      <td style="font-weight:700;color:var(--green-dark)">${r.code}</td>
+      <td>${r.pallet}</td>
+      <td class="date">${r.fecha}</td>
+    </tr>`).join('');
+}
+
+// CLEAR
+btnClear.addEventListener('click', () => {
+  if (!records.length) return;
+  if (!confirm(`¿Eliminar los ${records.length} registros?`)) return;
+  records.length = 0;
+  saveLocal();
+  renderTable();
+  setStatus('Registros eliminados', 'err');
+});
+
+// EXPORT EXCEL
+btnExport.addEventListener('click', () => {
+  if (!records.length) { setStatus('No hay registros para exportar', 'err'); return; }
+  const rows = [['Código', 'Pallet', 'Fecha y Hora'], ...records.map(r => [r.code, r.pallet, r.fecha])];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 24 }];
+  // Style header row
+  ['A1','B1','C1'].forEach(cell => {
+    if (ws[cell]) ws[cell].s = { font: { bold: true }, fill: { fgColor: { rgb: 'EAF3DE' } } };
+  });
+  XLSX.utils.book_append_sheet(wb, ws, 'Escaneos');
+  const today = new Date().toLocaleDateString('es-AR').replace(/\//g, '-');
+  XLSX.writeFile(wb, `etiquetas_${today}.xlsx`);
+  setStatus(`✓ Excel descargado: etiquetas_${today}.xlsx`, 'ok');
+});
+
+// INIT
+renderTable();
+</script>
+</body>
+</html>
