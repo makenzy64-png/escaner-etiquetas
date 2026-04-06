@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Escáner de Etiquetas v3</title>
+<title>Escáner de Etiquetas</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -15,9 +15,11 @@
     --text: #1a1a18; --text2: #666660; --mono: 'Courier New', monospace;
   }
   html, body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text); }
-  header { background: var(--green); color: #fff; padding: 14px 16px 12px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 6px rgba(0,0,0,0.2); }
+
+  header { background: var(--green); color: #fff; padding: 14px 16px 12px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
   header h1 { font-size: 17px; font-weight: 600; }
   header p  { font-size: 11px; opacity: 0.8; }
+
   main { padding: 12px; display: flex; flex-direction: column; gap: 12px; max-width: 520px; margin: 0 auto; }
   .card { background: var(--card); border-radius: 14px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
   .card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text2); margin-bottom: 10px; }
@@ -25,27 +27,27 @@
   /* camera */
   #cam-wrap { position: relative; border-radius: 10px; overflow: hidden; background: #111; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; }
   #video { width: 100%; height: 100%; object-fit: cover; display: none; }
-  #canvas-hidden, #canvas-preview { display: none; }
+  #canvas-hidden { display: none; }
   .cam-idle { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #666; }
   .cam-idle svg { opacity: .35; }
   .cam-idle span { font-size: 13px; }
-  /* crop guide overlay – wide rectangle targeting label area */
-  .finder { position: absolute; left: 5%; right: 5%; top: 25%; bottom: 25%; border: 2px solid rgba(29,158,117,.8); border-radius: 8px; display: none; pointer-events: none; }
-  .corner { position: absolute; width: 18px; height: 18px; }
-  .corner-tl { top:-2px;left:-2px;border-top:3px solid #1D9E75;border-left:3px solid #1D9E75;border-radius:3px 0 0 0; }
-  .corner-tr { top:-2px;right:-2px;border-top:3px solid #1D9E75;border-right:3px solid #1D9E75;border-radius:0 3px 0 0; }
-  .corner-bl { bottom:-2px;left:-2px;border-bottom:3px solid #1D9E75;border-left:3px solid #1D9E75;border-radius:0 0 0 3px; }
-  .corner-br { bottom:-2px;right:-2px;border-bottom:3px solid #1D9E75;border-right:3px solid #1D9E75;border-radius:0 0 3px 0; }
-  .scan-line { position: absolute; left:5%; right:5%; height:2px; background: linear-gradient(90deg,transparent,#1D9E75,transparent); display:none; animation: scanmove 2s ease-in-out infinite; }
-  @keyframes scanmove { 0%,100%{top:27%}50%{top:72%} }
 
-  /* preview strip */
-  #preview-wrap { display:none; margin-top:8px; border-radius:8px; overflow:hidden; border:1px solid var(--border); }
-  #preview-img  { width:100%; display:block; }
+  /* viewfinder: wide horizontal guide matching label shape */
+  .finder { position: absolute; left: 4%; right: 4%; top: 22%; bottom: 22%; border: 2px solid rgba(29,158,117,.85); border-radius: 8px; display: none; pointer-events: none; }
+  .corner { position: absolute; width: 20px; height: 20px; }
+  .corner-tl { top:-2px;left:-2px; border-top:3px solid #1D9E75;border-left:3px solid #1D9E75;border-radius:3px 0 0 0; }
+  .corner-tr { top:-2px;right:-2px; border-top:3px solid #1D9E75;border-right:3px solid #1D9E75;border-radius:0 3px 0 0; }
+  .corner-bl { bottom:-2px;left:-2px; border-bottom:3px solid #1D9E75;border-left:3px solid #1D9E75;border-radius:0 0 0 3px; }
+  .corner-br { bottom:-2px;right:-2px; border-bottom:3px solid #1D9E75;border-right:3px solid #1D9E75;border-radius:0 0 3px 0; }
+  .scan-line { position: absolute; left:4%; right:4%; height:2px; background: linear-gradient(90deg,transparent,#1D9E75,transparent); display:none; animation: scanmove 2.2s ease-in-out infinite; }
+  @keyframes scanmove { 0%,100%{top:24%} 50%{top:74%} }
+
+  /* hint label on viewfinder */
+  .finder-hint { position: absolute; bottom: -22px; left: 0; right: 0; text-align: center; font-size: 11px; color: rgba(255,255,255,0.75); display: none; pointer-events: none; }
 
   /* buttons */
   .btn-row { display:flex; gap:8px; margin-top:10px; }
-  .btn { flex:1; padding:11px 8px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; border:1.5px solid var(--border); background:#f0f0ea; color:var(--text); -webkit-tap-highlight-color:transparent; transition:background .1s; }
+  .btn { flex:1; padding:12px 8px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; border:1.5px solid var(--border); background:#f0f0ea; color:var(--text); -webkit-tap-highlight-color:transparent; }
   .btn:active { transform:scale(.97); }
   .btn.primary { background:var(--green); color:#fff; border-color:var(--green); }
   .btn.primary:active { background:var(--green-dark); }
@@ -53,57 +55,70 @@
   .btn.danger { background:var(--red-light); color:var(--red-text); border-color:transparent; }
 
   /* status + progress */
-  .status { font-size:12px; padding:7px 10px; border-radius:8px; margin-top:8px; display:none; font-weight:500; line-height:1.5; }
+  .status { font-size:12px; padding:8px 11px; border-radius:8px; margin-top:8px; display:none; font-weight:500; line-height:1.5; }
   .status.scan { background:var(--amber-light); color:var(--amber-text); }
   .status.ok   { background:var(--green-light);  color:var(--green-text); }
   .status.err  { background:var(--red-light);    color:var(--red-text); }
   .progress-wrap { height:3px; background:#e0e0d8; border-radius:2px; margin-top:8px; display:none; overflow:hidden; }
-  .progress-bar  { height:100%; background:var(--green); width:0%; transition:width .3s; }
+  .progress-bar  { height:100%; background:var(--green); width:0%; transition:width .25s; }
 
   /* results */
   .res-grid { display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px; margin-bottom:10px; }
-  .res-lbl { font-size:10px; color:var(--text2); margin-bottom:4px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
-  .res-val { font-family:var(--mono); font-size:14px; font-weight:700; background:#f5f5f0; padding:8px 10px; border-radius:8px; border:1px solid var(--border); min-height:40px; display:flex; align-items:center; color:var(--green-dark); word-break:break-all; }
-  .res-val.empty { font-size:11px; color:#aaa; font-family:inherit; font-weight:400; }
-  .ocr-box { font-family:var(--mono); font-size:10px; background:#f5f5f0; padding:7px 10px; border-radius:8px; color:var(--text2); word-break:break-all; min-height:32px; line-height:1.6; border:1px solid var(--border); max-height:80px; overflow-y:auto; }
+  .res-lbl { font-size:10px; color:var(--text2); margin-bottom:4px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .res-val { font-family:var(--mono); font-size:15px; font-weight:700; background:#f5f5f0; padding:9px 10px; border-radius:8px; border:1px solid var(--border); min-height:42px; display:flex; align-items:center; color:var(--green-dark); word-break:break-all; }
+  .res-val.empty { font-size:11px; color:#bbb; font-family:inherit; font-weight:400; }
+
+  .ocr-section { margin-bottom:0; }
+  .ocr-toggle { font-size:11px; color:var(--text2); cursor:pointer; padding:4px 0; display:inline-block; margin-bottom:4px; }
+  .ocr-box { font-family:var(--mono); font-size:10px; background:#f5f5f0; padding:7px 10px; border-radius:8px; color:var(--text2); word-break:break-all; line-height:1.6; border:1px solid var(--border); max-height:70px; overflow-y:auto; display:none; }
 
   /* manual entry */
   .manual-grid { display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:6px; margin-top:10px; }
-  .manual-grid input { padding:9px 8px; border-radius:9px; border:1.5px solid var(--border); background:#fafaf8; font-size:13px; font-family:var(--mono); color:var(--text); -webkit-appearance:none; width:100%; }
+  .manual-grid input { padding:10px 8px; border-radius:9px; border:1.5px solid var(--border); background:#fafaf8; font-size:13px; font-family:var(--mono); color:var(--text); -webkit-appearance:none; width:100%; }
   .manual-grid input:focus { outline:none; border-color:var(--green); }
-  .save-btn { padding:9px 14px; border-radius:9px; background:var(--green); color:#fff; font-size:14px; font-weight:700; border:none; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .save-btn { padding:10px 14px; border-radius:9px; background:var(--green); color:#fff; font-size:15px; font-weight:700; border:none; cursor:pointer; -webkit-tap-highlight-color:transparent; }
   .save-btn:active { background:var(--green-dark); transform:scale(.97); }
 
   /* table */
   .table-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
   .table-header .card-label { margin:0; }
   .tbl-actions { display:flex; gap:6px; }
-  .tbl-btn { padding:5px 11px; border-radius:8px; font-size:12px; font-weight:600; border:1.5px solid var(--border); background:#f0f0ea; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .tbl-btn { padding:5px 12px; border-radius:8px; font-size:12px; font-weight:600; border:1.5px solid var(--border); background:#f0f0ea; cursor:pointer; -webkit-tap-highlight-color:transparent; }
   .tbl-btn.export { background:var(--green); color:#fff; border-color:var(--green); }
   .tbl-wrap { overflow-x:auto; border-radius:8px; border:1px solid var(--border); }
   table { width:100%; border-collapse:collapse; font-size:12px; }
   th { background:#f5f5f0; padding:7px 8px; text-align:left; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text2); border-bottom:1px solid var(--border); white-space:nowrap; }
-  td { padding:7px 8px; border-bottom:1px solid var(--border); font-family:var(--mono); font-size:12px; }
+  td { padding:8px 8px; border-bottom:1px solid var(--border); font-family:var(--mono); font-size:12px; }
   tr:last-child td { border-bottom:none; }
   tr.new-row td { background:#EAF3DE; animation:faderow 2s forwards; }
   @keyframes faderow { to { background:transparent; } }
   .empty-msg { text-align:center; padding:20px; color:var(--text2); font-size:13px; font-family:inherit; }
+
   footer { text-align:center; padding:16px 12px 28px; font-size:11px; color:#bbb; }
 </style>
 </head>
 <body>
 
 <header>
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h2v2h-2z"/><path d="M18 14h3v3h-3z"/><path d="M14 18h2v3h-2z"/></svg>
-  <div><h1>Escáner de Etiquetas</h1><p>Código · Pallet · Bultos — v3</p></div>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+    <rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h2v2h-2z"/>
+    <path d="M18 14h3v3h-3z"/><path d="M14 18h2v3h-2z"/>
+  </svg>
+  <div><h1>Escáner de Etiquetas</h1><p>Código · Pallet · Bultos</p></div>
 </header>
 
 <main>
+
+  <!-- CAMERA -->
   <div class="card">
-    <div class="card-label">Cámara — encuadrá la etiqueta blanca</div>
+    <div class="card-label">Cámara — centrá la etiqueta blanca</div>
     <div id="cam-wrap">
       <div class="cam-idle" id="cam-idle">
-        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
         <span>Tocá "Activar cámara"</span>
       </div>
       <video id="video" autoplay playsinline muted></video>
@@ -112,10 +127,9 @@
         <div class="corner corner-bl"></div><div class="corner corner-br"></div>
       </div>
       <div class="scan-line" id="scan-line"></div>
+      <div class="finder-hint" id="finder-hint">encuadrá la etiqueta aquí</div>
     </div>
     <canvas id="canvas-hidden"></canvas>
-    <canvas id="canvas-preview"></canvas>
-    <div id="preview-wrap"><img id="preview-img" alt="preview"></div>
     <div class="progress-wrap" id="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
     <div class="btn-row">
       <button class="btn" id="btn-cam">Activar cámara</button>
@@ -124,6 +138,7 @@
     <div class="status" id="status"></div>
   </div>
 
+  <!-- RESULTS -->
   <div class="card">
     <div class="card-label">Resultado</div>
     <div class="res-grid">
@@ -131,16 +146,19 @@
       <div><div class="res-lbl">Pallet</div><div class="res-val empty" id="res-pallet">–</div></div>
       <div><div class="res-lbl">Bultos</div><div class="res-val empty" id="res-bultos">–</div></div>
     </div>
-    <div class="res-lbl" style="margin-bottom:5px">Texto OCR crudo</div>
-    <div class="ocr-box" id="ocr-raw">Escaneá una etiqueta…</div>
+    <div class="ocr-section">
+      <span class="ocr-toggle" id="ocr-toggle">▶ Ver texto OCR crudo</span>
+      <div class="ocr-box" id="ocr-raw">–</div>
+    </div>
     <div class="manual-grid">
-      <input type="text" id="inp-code"   placeholder="3111-70-JR-0500" style="font-size:11px">
+      <input type="text" id="inp-code"   placeholder="3132-70-AR-1000" style="font-size:11px">
       <input type="text" id="inp-pallet" placeholder="Pallet"  inputmode="numeric">
       <input type="text" id="inp-bultos" placeholder="Bultos"  inputmode="numeric">
-      <button class="save-btn" id="btn-save">OK</button>
+      <button class="save-btn" id="btn-save">✓</button>
     </div>
   </div>
 
+  <!-- TABLE -->
   <div class="card">
     <div class="table-header">
       <div class="card-label">Registros <span id="count" style="font-weight:400;color:var(--text2)">(0)</span></div>
@@ -156,36 +174,42 @@
       </table>
     </div>
   </div>
-</main>
 
-<footer>Los datos se guardan aunque cierres el navegador · v3</footer>
+</main>
+<footer>Los datos se guardan aunque cierres el navegador</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-const records = JSON.parse(localStorage.getItem('etiquetas_v3') || '[]');
+const records = JSON.parse(localStorage.getItem('etiquetas_v4') || '[]');
 let stream=null, worker=null, isScanning=false;
 
 const $=id=>document.getElementById(id);
 const video=$('video'), cvs=$('canvas-hidden'), ctx=cvs.getContext('2d');
-const cvsP=$('canvas-preview'), ctxP=cvsP.getContext('2d');
 const btnCam=$('btn-cam'), btnScan=$('btn-scan'), btnSave=$('btn-save');
 const btnClear=$('btn-clear'), btnExport=$('btn-export');
 const resCode=$('res-code'), resPallet=$('res-pallet'), resBultos=$('res-bultos');
-const ocrRaw=$('ocr-raw'), statusEl=$('status');
+const ocrRaw=$('ocr-raw'), ocrToggle=$('ocr-toggle'), statusEl=$('status');
 const inpCode=$('inp-code'), inpPallet=$('inp-pallet'), inpBultos=$('inp-bultos');
 const tbody=$('tbody'), count=$('count');
-const finder=$('finder'), scanLine=$('scan-line'), camIdle=$('cam-idle');
+const finder=$('finder'), scanLine=$('scan-line'), camIdle=$('cam-idle'), finderHint=$('finder-hint');
 const progressWrap=$('progress-wrap'), progressBar=$('progress-bar');
-const previewWrap=$('preview-wrap'), previewImg=$('preview-img');
 
-function setStatus(msg,type){ statusEl.textContent=msg; statusEl.className='status '+type; statusEl.style.display='block'; }
-function setProgress(p){ progressWrap.style.display=p>0?'block':'none'; progressBar.style.width=p+'%'; }
+// OCR raw toggle
+ocrToggle.addEventListener('click',()=>{
+  const box=ocrRaw;
+  const open=box.style.display==='block';
+  box.style.display=open?'none':'block';
+  ocrToggle.textContent=(open?'▶':'▼')+' Ver texto OCR crudo';
+});
+
+function setStatus(msg,type){statusEl.textContent=msg;statusEl.className='status '+type;statusEl.style.display='block';}
+function setProgress(p){progressWrap.style.display=p>0?'block':'none';progressBar.style.width=p+'%';}
 
 // ── WORKER ──────────────────────────────────────────────────────
 async function initWorker(){
   if(worker)return;
-  setStatus('Cargando motor OCR… (solo la primera vez)','scan'); setProgress(5);
+  setStatus('Cargando motor OCR… (solo la primera vez)','scan');setProgress(5);
   worker=await Tesseract.createWorker('eng',1,{logger:m=>{
     if(m.status==='loading tesseract core')       setProgress(15);
     if(m.status==='initializing tesseract')       setProgress(35);
@@ -196,130 +220,86 @@ async function initWorker(){
       setProgress(75+m.progress*23);
     }
   }});
-  // allow all printable chars — do NOT whitelist, it causes substitutions
-  await worker.setParameters({ preserve_interword_spaces:'1' });
+  // No char whitelist — whitelist causes wrong substitutions
+  await worker.setParameters({preserve_interword_spaces:'1'});
   setProgress(100);
-  setTimeout(()=>{ setProgress(0); statusEl.style.display='none'; },600);
+  setTimeout(()=>{setProgress(0);statusEl.style.display='none';},600);
 }
 
-// ── SMART CROP ───────────────────────────────────────────────────
-// Finds the brightest rectangular region (the white label) and crops to it.
-// Falls back to center 90%×60% if detection fails.
-function smartCrop(src){
-  const W=src.width, H=src.height;
-  const tmp=document.createElement('canvas'); tmp.width=W; tmp.height=H;
-  const tc=tmp.getContext('2d');
-  tc.filter='grayscale(1) contrast(2) brightness(1.1)';
-  tc.drawImage(src,0,0);
-  const imgData=tc.getImageData(0,0,W,H).data;
-
-  // Sample rows to find brightest horizontal band (the label)
-  const step=4; // sample every 4px
-  let rowBrightness=new Float32Array(H);
-  for(let y=0;y<H;y++){
-    let sum=0, n=0;
-    for(let x=Math.floor(W*0.05);x<Math.floor(W*0.95);x+=step){
-      sum+=imgData[(y*W+x)*4]; n++;
-    }
-    rowBrightness[y]=sum/n;
-  }
-  // Find top & bottom of bright band (>180 avg brightness)
-  const THRESH=170;
-  let top=-1,bot=-1;
-  for(let y=0;y<H;y++)   if(rowBrightness[y]>THRESH&&top===-1) top=y;
-  for(let y=H-1;y>=0;y--) if(rowBrightness[y]>THRESH&&bot===-1) bot=y;
-
-  // Same for columns
-  let colBrightness=new Float32Array(W);
-  for(let x=0;x<W;x++){
-    let sum=0, n=0;
-    for(let y=Math.floor(H*0.05);y<Math.floor(H*0.95);y+=step){
-      sum+=imgData[(y*W+x)*4]; n++;
-    }
-    colBrightness[x]=sum/n;
-  }
-  let left=-1,right=-1;
-  for(let x=0;x<W;x++)   if(colBrightness[x]>THRESH&&left===-1) left=x;
-  for(let x=W-1;x>=0;x--) if(colBrightness[x]>THRESH&&right===-1) right=x;
-
-  // Validate: crop must be at least 20% of image
-  const minW=W*0.2, minH=H*0.15;
-  if(top<0||bot<0||left<0||right<0||(bot-top)<minH||(right-left)<minW){
-    // fallback: centre strip
-    top=Math.floor(H*0.2); bot=Math.floor(H*0.8);
-    left=Math.floor(W*0.03); right=Math.floor(W*0.97);
-  }
-
-  // Small padding
-  const pad=10;
-  top=Math.max(0,top-pad); bot=Math.min(H,bot+pad);
-  left=Math.max(0,left-pad); right=Math.min(W,right+pad);
-
-  const cw=right-left, ch=bot-top;
-  const out=document.createElement('canvas'); out.width=cw; out.height=ch;
-  out.getContext('2d').drawImage(src,left,top,cw,ch,0,0,cw,ch);
-  return {canvas:out, x:left, y:top, w:cw, h:ch};
-}
-
-// ── PREPROCESS for OCR ───────────────────────────────────────────
+// ── PREPROCESS ───────────────────────────────────────────────────
+// Upscale 2× + grayscale + contrast. Simple and reliable.
 function preprocess(src){
-  const o=document.createElement('canvas'); o.width=src.width*2; o.height=src.height*2;
+  const o=document.createElement('canvas');
+  o.width=src.width*2; o.height=src.height*2;
   const c=o.getContext('2d');
-  c.imageSmoothingEnabled=true; c.imageSmoothingQuality='high';
-  c.filter='contrast(1.8) brightness(1.05) grayscale(1)';
-  c.drawImage(src,0,0,o.width,o.height); // 2× upscale improves OCR
+  c.imageSmoothingEnabled=true;
+  c.imageSmoothingQuality='high';
+  c.filter='grayscale(1) contrast(1.9) brightness(1.08)';
+  c.drawImage(src,0,0,o.width,o.height);
   return o;
 }
 
-// ── EXTRACT DATA ─────────────────────────────────────────────────
-function cleanOCR(raw){
+// ── CLEAN OCR TEXT ───────────────────────────────────────────────
+function cleanText(raw){
   return raw
-    .replace(/\r/g,' ').replace(/\n/g,' ')
-    // Fix common letter→digit substitutions near digits
+    // Normalize line breaks to spaces
+    .replace(/[\r\n]+/g,' ')
+    // Fix digit-adjacent substitutions
     .replace(/(?<=\d)[Oo](?=\d)/g,'0')
-    .replace(/(?<=\d)[lI|](?=\d)/g,'1')
+    .replace(/(?<=\d)[lIi|](?=\d)/g,'1')
     .replace(/(?<=\d)[Ss](?=\d)/g,'5')
     .replace(/(?<=\d)[Bb](?=\d)/g,'8')
+    // Collapse whitespace
     .replace(/\s{2,}/g,' ')
     .trim();
 }
 
+// ── EXTRACT DATA ─────────────────────────────────────────────────
 function extractData(raw){
-  const t=cleanOCR(raw);
+  const t = cleanText(raw);
 
-  // ── CODE: NNNN-NN-XX-NNNN ────────────────────────────────────
-  let code='';
-  // Primary: strict pattern
-  const mC1=t.match(/(\d{3,4})\s*[-–—]\s*(\d{2,3})\s*[-–—]\s*([A-Za-z]{2,3})\s*[-–—]\s*(\d{3,4})/);
-  if(mC1) code=`${mC1[1]}-${mC1[2]}-${mC1[3].toUpperCase()}-${mC1[4]}`;
+  // ── CODE ────────────────────────────────────────────────────
+  // Pattern: NNNN-NN-XX-NNNN  (e.g. 3132-70-AR-1000)
+  // Tolerates extra spaces, en-dashes, em-dashes
+  let code = '';
+  const mCode = t.match(/(\d{3,4})\s*[-–—]\s*(\d{2,3})\s*[-–—]\s*([A-Za-z]{2,3})\s*[-–—]\s*(\d{3,4})/);
+  if(mCode) code = `${mCode[1]}-${mCode[2]}-${mCode[3].toUpperCase()}-${mCode[4]}`;
 
-  // ── PALLET: 6-digit number ───────────────────────────────────
-  // Strategy 1: explicit "Pallet NNNNNN"
-  let pallet='';
-  const mP1=t.match(/[Pp]a[lt]{1,2}[ea]?[tl]?\s{0,3}(\d{5,8})/);
-  if(mP1){ pallet=mP1[1]; }
-  else {
-    // Strategy 2: any standalone 6-digit number that doesn't look like a date
-    // (dates look like DDMMYYYY or have slashes)
-    const allSix=[...t.matchAll(/\b(\d{6})\b/g)].map(m=>m[1]);
-    // prefer numbers starting with 1 (like 109007) — typical pallet range
-    const candidate=allSix.find(n=>n[0]==='1')||allSix[0]||'';
-    pallet=candidate;
+  // ── PALLET ──────────────────────────────────────────────────
+  // Strategy 1: explicit "Pallet NNNNNN" — word may be garbled
+  // pa?l+e?t? covers: Pallet, Palet, Paliet, Pallett, etc.
+  let pallet = '';
+  const mP1 = t.match(/[Pp]a[lt]{1,2}[ea]?[tl]?\s{0,4}(\d{5,8})/);
+  if(mP1){
+    pallet = mP1[1];
+  } else {
+    // Strategy 2: standalone 6-digit number not part of a date
+    // Exclude numbers that look like dates (preceded or followed by /)
+    const candidates = [];
+    const re6 = /(?<![\/\d])(\d{6})(?![\/\d])/g;
+    let m;
+    while((m=re6.exec(t))!==null) candidates.push(m[1]);
+    // Prefer numbers starting with 1 (typical pallet ID range 100000-199999)
+    pallet = candidates.find(n=>n[0]==='1') || candidates[0] || '';
   }
 
-  // ── BULTOS: small number (1-3 digits) near word BULTOS ───────
-  let bultos='';
-  // Strategy 1: number directly before BULTOS (with any garbage between)
-  const mB1=t.match(/(\d{1,3})\s{0,5}[Bb][Uu][Ll][Tt][Oo][Ss]/);
-  if(mB1){ bultos=mB1[1]; }
-  else {
-    // Strategy 2: after INGRESO / CON with garbage between
-    const mB2=t.match(/(?:INGRESO|ingreso|CON|con).{0,20}?(\d{1,3}).{0,10}?(?:BULTOS|bultos)/i);
-    if(mB2) bultos=mB2[1];
-    else {
+  // ── BULTOS ──────────────────────────────────────────────────
+  // Supports 1, 2, or 3 digit counts (e.g. 5, 55, 120)
+  let bultos = '';
+
+  // Strategy 1: N BULTOS or N\nBULTOS  (number before the word, up to 8 chars between)
+  const mB1 = t.match(/(\d{1,3})\s{0,8}[Bb][Uu][Ll][Tt][Oo][Ss]/);
+  if(mB1){
+    bultos = mB1[1];
+  } else {
+    // Strategy 2: "INGRESO CON[:]? ... N ... BULTOS" — number between CON and BULTOS
+    const mB2 = t.match(/(?:INGRESO\s+CON|CON)\s*[:\-]?\s*(\d{1,3})\s+[Bb][Uu][Ll][Tt][Oo][Ss]/i);
+    if(mB2){
+      bultos = mB2[1];
+    } else {
       // Strategy 3: number after BULTOS
-      const mB3=t.match(/[Bb][Uu][Ll][Tt][Oo][Ss]\s{0,5}(\d{1,3})/);
-      if(mB3) bultos=mB3[1];
+      const mB3 = t.match(/[Bb][Uu][Ll][Tt][Oo][Ss]\s{0,4}(\d{1,3})/);
+      if(mB3) bultos = mB3[1];
     }
   }
 
@@ -331,8 +311,7 @@ btnCam.addEventListener('click',async()=>{
   if(stream){
     stream.getTracks().forEach(t=>t.stop()); stream=null;
     video.style.display='none'; camIdle.style.display='flex';
-    finder.style.display='none'; scanLine.style.display='none';
-    previewWrap.style.display='none';
+    finder.style.display='none'; scanLine.style.display='none'; finderHint.style.display='none';
     btnCam.textContent='Activar cámara'; btnCam.classList.remove('danger');
     btnScan.disabled=true; statusEl.style.display='none'; return;
   }
@@ -342,7 +321,7 @@ btnCam.addEventListener('click',async()=>{
       video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080} }
     });
     video.srcObject=stream; video.style.display='block'; camIdle.style.display='none';
-    finder.style.display='block'; scanLine.style.display='block';
+    finder.style.display='block'; scanLine.style.display='block'; finderHint.style.display='block';
     btnCam.textContent='✕ Detener'; btnCam.classList.add('danger');
     btnScan.disabled=false; statusEl.style.display='none';
     initWorker();
@@ -358,46 +337,35 @@ btnCam.addEventListener('click',async()=>{
 btnScan.addEventListener('click',async()=>{
   if(isScanning||!stream)return;
   isScanning=true; btnScan.disabled=true;
-  setStatus('Capturando…','scan'); setProgress(5);
+  setStatus('Capturando imagen…','scan'); setProgress(10);
 
-  // Capture frame
   cvs.width=video.videoWidth||1280; cvs.height=video.videoHeight||960;
   ctx.drawImage(video,0,0);
 
-  // Smart crop to label area
-  const {canvas:cropped}=smartCrop(cvs);
-
-  // Show preview of what will be OCR'd
-  previewImg.src=cropped.toDataURL('image/jpeg',0.8);
-  previewWrap.style.display='block';
-
-  // Upscale + enhance
-  const enhanced=preprocess(cropped);
-
-  setProgress(30);
-  setStatus('Analizando texto…','scan');
+  const enhanced=preprocess(cvs);
+  setProgress(30); setStatus('Analizando texto…','scan');
 
   try{
-    // Pass 1: full OCR
-    const {data:{text:t1, confidence:c1}}=await worker.recognize(enhanced);
-    let bestText=t1;
-    let bestConf=c1;
+    // Pass 1: standard enhancement
+    const {data:{text:t1,confidence:c1}} = await worker.recognize(enhanced);
 
-    // Pass 2: if confidence low, try with sharper contrast
-    if(c1<60){
+    let bestText=t1, bestConf=c1;
+
+    // Pass 2: only if first pass confidence is poor (<55)
+    if(c1<55){
       const sharp=document.createElement('canvas');
       sharp.width=enhanced.width; sharp.height=enhanced.height;
       const sc=sharp.getContext('2d');
-      sc.filter='contrast(2.5) brightness(0.95) grayscale(1)';
-      sc.drawImage(enhanced,0,0);
-      const {data:{text:t2,confidence:c2}}=await worker.recognize(sharp);
-      if(c2>c1){ bestText=t2; bestConf=c2; }
+      sc.filter='grayscale(1) contrast(2.6) brightness(0.92)';
+      sc.drawImage(cvs,0,0,sharp.width,sharp.height);
+      const {data:{text:t2,confidence:c2}} = await worker.recognize(sharp);
+      if(c2>c1){bestText=t2; bestConf=c2;}
     }
 
-    const clean=bestText.replace(/\n+/g,'\n').trim();
-    ocrRaw.textContent=clean||'(sin texto)';
+    // Show raw text (collapsed by default)
+    ocrRaw.textContent=bestText.trim()||'(sin texto detectado)';
 
-    const {code,pallet,bultos}=extractData(clean);
+    const {code,pallet,bultos} = extractData(bestText);
     const conf=Math.round(bestConf);
 
     function fill(el,inp,val){
@@ -409,9 +377,12 @@ btnScan.addEventListener('click',async()=>{
     fill(resBultos,inpBultos,bultos);
 
     const found=[code,pallet,bultos].filter(Boolean).length;
-    if(found===3)    setStatus(`✓ Todo detectado (confianza ${conf}%). Revisá y guardá.`,'ok');
-    else if(found>0) setStatus(`${found}/3 campos detectados (confianza ${conf}%). Completá los que faltan a mano.`,'scan');
-    else             setStatus('No se detectó texto. Acercate más o mejorá la iluminación.','err');
+    if(found===3)
+      setStatus(`✓ Todo detectado (confianza ${conf}%). Revisá y tocá ✓ para guardar.`,'ok');
+    else if(found>0)
+      setStatus(`${found}/3 campos detectados (confianza ${conf}%). Completá los faltantes.`,'scan');
+    else
+      setStatus('No se detectó texto. Acercate más o mejorá la iluminación.','err');
 
     setProgress(0);
   }catch(e){
@@ -431,13 +402,15 @@ btnSave.addEventListener('click',()=>{
   saveLocal(); renderTable();
   inpCode.value=''; inpPallet.value=''; inpBultos.value='';
   [resCode,resPallet,resBultos].forEach(el=>{el.textContent='–';el.classList.add('empty');});
-  previewWrap.style.display='none';
+  ocrRaw.style.display='none'; ocrToggle.textContent='▶ Ver texto OCR crudo';
   setStatus(`✓ Guardado. Total: ${records.length} registro${records.length!==1?'s':''}.`,'ok');
 });
 
-function saveLocal(){try{localStorage.setItem('etiquetas_v3',JSON.stringify(records.slice(0,1000)));}catch(e){}}
+function saveLocal(){
+  try{localStorage.setItem('etiquetas_v4',JSON.stringify(records.slice(0,1000)));}catch(e){}
+}
 
-// ── TABLE ─────────────────────────────────────────────────────────
+// ── TABLE ────────────────────────────────────────────────────────
 function renderTable(){
   count.textContent=`(${records.length})`;
   if(!records.length){tbody.innerHTML='<tr><td colspan="5" class="empty-msg">Sin registros aún</td></tr>';return;}
@@ -460,7 +433,10 @@ btnClear.addEventListener('click',()=>{
 // ── EXPORT ───────────────────────────────────────────────────────
 btnExport.addEventListener('click',()=>{
   if(!records.length){setStatus('No hay registros para exportar','err');return;}
-  const rows=[['Código','Pallet','Bultos','Fecha y Hora'],...records.map(r=>[r.code,r.pallet,r.bultos||'',r.fecha])];
+  const rows=[
+    ['Código','Pallet','Bultos','Fecha y Hora'],
+    ...records.map(r=>[r.code,r.pallet,r.bultos||'',r.fecha])
+  ];
   const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:20},{wch:12},{wch:8},{wch:22}];
   XLSX.utils.book_append_sheet(wb,ws,'Escaneos');
