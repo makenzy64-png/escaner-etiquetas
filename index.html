@@ -4,14 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Escáner de Etiquetas</title>
+<title>Escáner IA de Etiquetas</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --green: #1D9E75; --green-dark: #0F6E56; --green-light: #EAF3DE; --green-text: #3B6D11;
     --amber-light: #FAEEDA; --amber-text: #854F0B;
     --red-light: #FCEBEB; --red-text: #A32D2D;
-    --bg: #f5f5f0; --card: #ffffff; --border: rgba(0,0,0,0.12);
+    --blue-light: #E6F1FB; --blue-text: #185FA5;
+    --bg: #f5f5f0; --card: #fff; --border: rgba(0,0,0,0.12);
     --text: #1a1a18; --text2: #666660; --mono: 'Courier New', monospace;
   }
   html, body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text); }
@@ -24,15 +25,23 @@
   .card { background: var(--card); border-radius: 14px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
   .card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text2); margin-bottom: 10px; }
 
-  /* camera */
+  /* API KEY SETUP */
+  .setup-box { background: var(--blue-light); border-radius: 10px; padding: 12px 14px; }
+  .setup-box p { font-size: 13px; color: var(--blue-text); margin-bottom: 8px; line-height: 1.5; }
+  .key-row { display: flex; gap: 8px; }
+  .key-row input { flex: 1; padding: 10px 12px; border-radius: 9px; border: 1.5px solid rgba(24,95,165,0.3); background: #fff; font-size: 13px; font-family: var(--mono); color: var(--text); -webkit-appearance: none; }
+  .key-row input:focus { outline: none; border-color: var(--green); }
+  .key-btn { padding: 10px 14px; border-radius: 9px; background: var(--green); color: #fff; font-size: 13px; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; }
+  .key-btn:active { background: var(--green-dark); }
+  .key-saved { font-size: 11px; color: var(--green-text); background: var(--green-light); padding: 5px 10px; border-radius: 7px; margin-top: 6px; display: none; }
+
+  /* CAMERA */
   #cam-wrap { position: relative; border-radius: 10px; overflow: hidden; background: #111; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; }
   #video { width: 100%; height: 100%; object-fit: cover; display: none; }
   #canvas-hidden { display: none; }
   .cam-idle { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #666; }
   .cam-idle svg { opacity: .35; }
   .cam-idle span { font-size: 13px; }
-
-  /* viewfinder: wide horizontal guide matching label shape */
   .finder { position: absolute; left: 4%; right: 4%; top: 22%; bottom: 22%; border: 2px solid rgba(29,158,117,.85); border-radius: 8px; display: none; pointer-events: none; }
   .corner { position: absolute; width: 20px; height: 20px; }
   .corner-tl { top:-2px;left:-2px; border-top:3px solid #1D9E75;border-left:3px solid #1D9E75;border-radius:3px 0 0 0; }
@@ -40,75 +49,85 @@
   .corner-bl { bottom:-2px;left:-2px; border-bottom:3px solid #1D9E75;border-left:3px solid #1D9E75;border-radius:0 0 0 3px; }
   .corner-br { bottom:-2px;right:-2px; border-bottom:3px solid #1D9E75;border-right:3px solid #1D9E75;border-radius:0 0 3px 0; }
   .scan-line { position: absolute; left:4%; right:4%; height:2px; background: linear-gradient(90deg,transparent,#1D9E75,transparent); display:none; animation: scanmove 2.2s ease-in-out infinite; }
-  @keyframes scanmove { 0%,100%{top:24%} 50%{top:74%} }
+  @keyframes scanmove { 0%,100%{top:24%}50%{top:74%} }
 
-  /* hint label on viewfinder */
-  .finder-hint { position: absolute; bottom: -22px; left: 0; right: 0; text-align: center; font-size: 11px; color: rgba(255,255,255,0.75); display: none; pointer-events: none; }
+  /* AI thinking overlay */
+  .ai-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border-radius: 10px; }
+  .ai-overlay span { color: #fff; font-size: 14px; font-weight: 600; }
+  .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #1D9E75; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* buttons */
-  .btn-row { display:flex; gap:8px; margin-top:10px; }
-  .btn { flex:1; padding:12px 8px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; border:1.5px solid var(--border); background:#f0f0ea; color:var(--text); -webkit-tap-highlight-color:transparent; }
-  .btn:active { transform:scale(.97); }
-  .btn.primary { background:var(--green); color:#fff; border-color:var(--green); }
-  .btn.primary:active { background:var(--green-dark); }
-  .btn:disabled { opacity:.4; cursor:not-allowed; }
-  .btn.danger { background:var(--red-light); color:var(--red-text); border-color:transparent; }
+  .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+  .btn { flex: 1; padding: 12px 8px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); background: #f0f0ea; color: var(--text); -webkit-tap-highlight-color: transparent; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn.primary:active { background: var(--green-dark); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.danger { background: var(--red-light); color: var(--red-text); border-color: transparent; }
 
-  /* status + progress */
-  .status { font-size:12px; padding:8px 11px; border-radius:8px; margin-top:8px; display:none; font-weight:500; line-height:1.5; }
-  .status.scan { background:var(--amber-light); color:var(--amber-text); }
-  .status.ok   { background:var(--green-light);  color:var(--green-text); }
-  .status.err  { background:var(--red-light);    color:var(--red-text); }
-  .progress-wrap { height:3px; background:#e0e0d8; border-radius:2px; margin-top:8px; display:none; overflow:hidden; }
-  .progress-bar  { height:100%; background:var(--green); width:0%; transition:width .25s; }
+  .status { font-size: 12px; padding: 8px 11px; border-radius: 8px; margin-top: 8px; display: none; font-weight: 500; line-height: 1.5; }
+  .status.scan { background: var(--amber-light); color: var(--amber-text); }
+  .status.ok   { background: var(--green-light);  color: var(--green-text); }
+  .status.err  { background: var(--red-light);    color: var(--red-text); }
 
   /* results */
-  .res-grid { display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px; margin-bottom:10px; }
-  .res-lbl { font-size:10px; color:var(--text2); margin-bottom:4px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
-  .res-val { font-family:var(--mono); font-size:15px; font-weight:700; background:#f5f5f0; padding:9px 10px; border-radius:8px; border:1px solid var(--border); min-height:42px; display:flex; align-items:center; color:var(--green-dark); word-break:break-all; }
-  .res-val.empty { font-size:11px; color:#bbb; font-family:inherit; font-weight:400; }
+  .res-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .res-lbl { font-size: 10px; color: var(--text2); margin-bottom: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .res-val { font-family: var(--mono); font-size: 15px; font-weight: 700; background: #f5f5f0; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--border); min-height: 42px; display: flex; align-items: center; color: var(--green-dark); word-break: break-all; }
+  .res-val.empty { font-size: 11px; color: #bbb; font-family: inherit; font-weight: 400; }
 
-  .ocr-section { margin-bottom:0; }
-  .ocr-toggle { font-size:11px; color:var(--text2); cursor:pointer; padding:4px 0; display:inline-block; margin-bottom:4px; }
-  .ocr-box { font-family:var(--mono); font-size:10px; background:#f5f5f0; padding:7px 10px; border-radius:8px; color:var(--text2); word-break:break-all; line-height:1.6; border:1px solid var(--border); max-height:70px; overflow-y:auto; display:none; }
+  /* AI response box */
+  .ai-box { font-size: 12px; background: var(--blue-light); padding: 8px 12px; border-radius: 8px; color: var(--blue-text); line-height: 1.6; display: none; margin-bottom: 10px; }
 
   /* manual entry */
-  .manual-grid { display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:6px; margin-top:10px; }
-  .manual-grid input { padding:10px 8px; border-radius:9px; border:1.5px solid var(--border); background:#fafaf8; font-size:13px; font-family:var(--mono); color:var(--text); -webkit-appearance:none; width:100%; }
-  .manual-grid input:focus { outline:none; border-color:var(--green); }
-  .save-btn { padding:10px 14px; border-radius:9px; background:var(--green); color:#fff; font-size:15px; font-weight:700; border:none; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-  .save-btn:active { background:var(--green-dark); transform:scale(.97); }
+  .manual-grid { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 6px; margin-top: 10px; }
+  .manual-grid input { padding: 10px 8px; border-radius: 9px; border: 1.5px solid var(--border); background: #fafaf8; font-size: 13px; font-family: var(--mono); color: var(--text); -webkit-appearance: none; width: 100%; }
+  .manual-grid input:focus { outline: none; border-color: var(--green); }
+  .save-btn { padding: 10px 14px; border-radius: 9px; background: var(--green); color: #fff; font-size: 15px; font-weight: 700; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .save-btn:active { background: var(--green-dark); transform: scale(.97); }
 
   /* table */
-  .table-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-  .table-header .card-label { margin:0; }
-  .tbl-actions { display:flex; gap:6px; }
-  .tbl-btn { padding:5px 12px; border-radius:8px; font-size:12px; font-weight:600; border:1.5px solid var(--border); background:#f0f0ea; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-  .tbl-btn.export { background:var(--green); color:#fff; border-color:var(--green); }
-  .tbl-wrap { overflow-x:auto; border-radius:8px; border:1px solid var(--border); }
-  table { width:100%; border-collapse:collapse; font-size:12px; }
-  th { background:#f5f5f0; padding:7px 8px; text-align:left; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text2); border-bottom:1px solid var(--border); white-space:nowrap; }
-  td { padding:8px 8px; border-bottom:1px solid var(--border); font-family:var(--mono); font-size:12px; }
-  tr:last-child td { border-bottom:none; }
-  tr.new-row td { background:#EAF3DE; animation:faderow 2s forwards; }
-  @keyframes faderow { to { background:transparent; } }
-  .empty-msg { text-align:center; padding:20px; color:var(--text2); font-size:13px; font-family:inherit; }
-
-  footer { text-align:center; padding:16px 12px 28px; font-size:11px; color:#bbb; }
+  .table-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .table-header .card-label { margin: 0; }
+  .tbl-actions { display: flex; gap: 6px; }
+  .tbl-btn { padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1.5px solid var(--border); background: #f0f0ea; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .tbl-btn.export { background: var(--green); color: #fff; border-color: var(--green); }
+  .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: #f5f5f0; padding: 7px 8px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 8px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+  tr.new-row td { background: #EAF3DE; animation: faderow 2s forwards; }
+  @keyframes faderow { to { background: transparent; } }
+  .empty-msg { text-align: center; padding: 20px; color: var(--text2); font-size: 13px; font-family: inherit; }
+  footer { text-align: center; padding: 16px 12px 28px; font-size: 11px; color: #bbb; }
 </style>
 </head>
 <body>
 
 <header>
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-    <rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h2v2h-2z"/>
-    <path d="M18 14h3v3h-3z"/><path d="M14 18h2v3h-2z"/>
+    <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+    <path d="M12 8v4l3 3"/>
   </svg>
-  <div><h1>Escáner de Etiquetas</h1><p>Código · Pallet · Bultos</p></div>
+  <div><h1>Escáner IA de Etiquetas</h1><p>Gemini Flash Vision · Código · Pallet · Bultos</p></div>
 </header>
 
 <main>
+
+  <!-- API KEY -->
+  <div class="card" id="card-key">
+    <div class="card-label">🔑 API Key de Gemini</div>
+    <div class="setup-box">
+      <p>Pegá tu API key de Google AI Studio. Se guarda en el dispositivo y no se comparte con nadie.</p>
+      <div class="key-row">
+        <input type="password" id="inp-key" placeholder="AIzaSy...">
+        <button class="key-btn" id="btn-key">Guardar</button>
+      </div>
+      <div class="key-saved" id="key-saved">✓ API key guardada</div>
+    </div>
+  </div>
 
   <!-- CAMERA -->
   <div class="card">
@@ -127,13 +146,15 @@
         <div class="corner corner-bl"></div><div class="corner corner-br"></div>
       </div>
       <div class="scan-line" id="scan-line"></div>
-      <div class="finder-hint" id="finder-hint">encuadrá la etiqueta aquí</div>
+      <div class="ai-overlay" id="ai-overlay">
+        <div class="spinner"></div>
+        <span id="ai-status-text">Analizando con IA…</span>
+      </div>
     </div>
     <canvas id="canvas-hidden"></canvas>
-    <div class="progress-wrap" id="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
     <div class="btn-row">
       <button class="btn" id="btn-cam">Activar cámara</button>
-      <button class="btn primary" id="btn-scan" disabled>📷 Escanear</button>
+      <button class="btn primary" id="btn-scan" disabled>📷 Escanear con IA</button>
     </div>
     <div class="status" id="status"></div>
   </div>
@@ -141,14 +162,11 @@
   <!-- RESULTS -->
   <div class="card">
     <div class="card-label">Resultado</div>
+    <div class="ai-box" id="ai-box"></div>
     <div class="res-grid">
       <div><div class="res-lbl">Código</div><div class="res-val empty" id="res-code">–</div></div>
       <div><div class="res-lbl">Pallet</div><div class="res-val empty" id="res-pallet">–</div></div>
       <div><div class="res-lbl">Bultos</div><div class="res-val empty" id="res-bultos">–</div></div>
-    </div>
-    <div class="ocr-section">
-      <span class="ocr-toggle" id="ocr-toggle">▶ Ver texto OCR crudo</span>
-      <div class="ocr-box" id="ocr-raw">–</div>
     </div>
     <div class="manual-grid">
       <input type="text" id="inp-code"   placeholder="3132-70-AR-1000" style="font-size:11px">
@@ -176,142 +194,49 @@
   </div>
 
 </main>
-<footer>Los datos se guardan aunque cierres el navegador</footer>
+<footer>API key guardada localmente · Datos nunca salen del dispositivo</footer>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-const records = JSON.parse(localStorage.getItem('etiquetas_v4') || '[]');
-let stream=null, worker=null, isScanning=false;
+const records = JSON.parse(localStorage.getItem('etiquetas_ia') || '[]');
+let stream = null, isScanning = false;
 
-const $=id=>document.getElementById(id);
+const $ = id => document.getElementById(id);
 const video=$('video'), cvs=$('canvas-hidden'), ctx=cvs.getContext('2d');
 const btnCam=$('btn-cam'), btnScan=$('btn-scan'), btnSave=$('btn-save');
 const btnClear=$('btn-clear'), btnExport=$('btn-export');
 const resCode=$('res-code'), resPallet=$('res-pallet'), resBultos=$('res-bultos');
-const ocrRaw=$('ocr-raw'), ocrToggle=$('ocr-toggle'), statusEl=$('status');
+const statusEl=$('status'), aiBox=$('ai-box'), aiOverlay=$('ai-overlay'), aiStatusText=$('ai-status-text');
 const inpCode=$('inp-code'), inpPallet=$('inp-pallet'), inpBultos=$('inp-bultos');
 const tbody=$('tbody'), count=$('count');
-const finder=$('finder'), scanLine=$('scan-line'), camIdle=$('cam-idle'), finderHint=$('finder-hint');
-const progressWrap=$('progress-wrap'), progressBar=$('progress-bar');
-
-// OCR raw toggle
-ocrToggle.addEventListener('click',()=>{
-  const box=ocrRaw;
-  const open=box.style.display==='block';
-  box.style.display=open?'none':'block';
-  ocrToggle.textContent=(open?'▶':'▼')+' Ver texto OCR crudo';
-});
+const finder=$('finder'), scanLine=$('scan-line'), camIdle=$('cam-idle');
+const inpKey=$('inp-key'), btnKey=$('btn-key'), keySaved=$('key-saved');
 
 function setStatus(msg,type){statusEl.textContent=msg;statusEl.className='status '+type;statusEl.style.display='block';}
-function setProgress(p){progressWrap.style.display=p>0?'block':'none';progressBar.style.width=p+'%';}
 
-// ── WORKER ──────────────────────────────────────────────────────
-async function initWorker(){
-  if(worker)return;
-  setStatus('Cargando motor OCR… (solo la primera vez)','scan');setProgress(5);
-  worker=await Tesseract.createWorker('eng',1,{logger:m=>{
-    if(m.status==='loading tesseract core')       setProgress(15);
-    if(m.status==='initializing tesseract')       setProgress(35);
-    if(m.status==='loading language traineddata') setProgress(55);
-    if(m.status==='initializing api')             setProgress(75);
-    if(m.status==='recognizing text'){
-      setStatus('Reconociendo… '+Math.round(m.progress*100)+'%','scan');
-      setProgress(75+m.progress*23);
-    }
-  }});
-  // No char whitelist — whitelist causes wrong substitutions
-  await worker.setParameters({preserve_interword_spaces:'1'});
-  setProgress(100);
-  setTimeout(()=>{setProgress(0);statusEl.style.display='none';},600);
-}
+// ── API KEY ──────────────────────────────────────────────────────
+function getKey(){ return localStorage.getItem('gemini_key')||''; }
 
-// ── PREPROCESS ───────────────────────────────────────────────────
-// Upscale 2× + grayscale + contrast. Simple and reliable.
-function preprocess(src){
-  const o=document.createElement('canvas');
-  o.width=src.width*2; o.height=src.height*2;
-  const c=o.getContext('2d');
-  c.imageSmoothingEnabled=true;
-  c.imageSmoothingQuality='high';
-  c.filter='grayscale(1) contrast(1.9) brightness(1.08)';
-  c.drawImage(src,0,0,o.width,o.height);
-  return o;
-}
+(function initKey(){
+  const k=getKey();
+  if(k){ inpKey.value='••••••••••••••••'; keySaved.style.display='block'; }
+})();
 
-// ── CLEAN OCR TEXT ───────────────────────────────────────────────
-function cleanText(raw){
-  return raw
-    // Normalize line breaks to spaces
-    .replace(/[\r\n]+/g,' ')
-    // Fix digit-adjacent substitutions
-    .replace(/(?<=\d)[Oo](?=\d)/g,'0')
-    .replace(/(?<=\d)[lIi|](?=\d)/g,'1')
-    .replace(/(?<=\d)[Ss](?=\d)/g,'5')
-    .replace(/(?<=\d)[Bb](?=\d)/g,'8')
-    // Collapse whitespace
-    .replace(/\s{2,}/g,' ')
-    .trim();
-}
-
-// ── EXTRACT DATA ─────────────────────────────────────────────────
-function extractData(raw){
-  const t = cleanText(raw);
-
-  // ── CODE ────────────────────────────────────────────────────
-  // Pattern: NNNN-NN-XX-NNNN  (e.g. 3132-70-AR-1000)
-  // Tolerates extra spaces, en-dashes, em-dashes
-  let code = '';
-  const mCode = t.match(/(\d{3,4})\s*[-–—]\s*(\d{2,3})\s*[-–—]\s*([A-Za-z]{2,3})\s*[-–—]\s*(\d{3,4})/);
-  if(mCode) code = `${mCode[1]}-${mCode[2]}-${mCode[3].toUpperCase()}-${mCode[4]}`;
-
-  // ── PALLET ──────────────────────────────────────────────────
-  // Strategy 1: explicit "Pallet NNNNNN" — word may be garbled
-  // pa?l+e?t? covers: Pallet, Palet, Paliet, Pallett, etc.
-  let pallet = '';
-  const mP1 = t.match(/[Pp]a[lt]{1,2}[ea]?[tl]?\s{0,4}(\d{5,8})/);
-  if(mP1){
-    pallet = mP1[1];
-  } else {
-    // Strategy 2: standalone 6-digit number not part of a date
-    // Exclude numbers that look like dates (preceded or followed by /)
-    const candidates = [];
-    const re6 = /(?<![\/\d])(\d{6})(?![\/\d])/g;
-    let m;
-    while((m=re6.exec(t))!==null) candidates.push(m[1]);
-    // Prefer numbers starting with 1 (typical pallet ID range 100000-199999)
-    pallet = candidates.find(n=>n[0]==='1') || candidates[0] || '';
-  }
-
-  // ── BULTOS ──────────────────────────────────────────────────
-  // Supports 1, 2, or 3 digit counts (e.g. 5, 55, 120)
-  let bultos = '';
-
-  // Strategy 1: N BULTOS or N\nBULTOS  (number before the word, up to 8 chars between)
-  const mB1 = t.match(/(\d{1,3})\s{0,8}[Bb][Uu][Ll][Tt][Oo][Ss]/);
-  if(mB1){
-    bultos = mB1[1];
-  } else {
-    // Strategy 2: "INGRESO CON[:]? ... N ... BULTOS" — number between CON and BULTOS
-    const mB2 = t.match(/(?:INGRESO\s+CON|CON)\s*[:\-]?\s*(\d{1,3})\s+[Bb][Uu][Ll][Tt][Oo][Ss]/i);
-    if(mB2){
-      bultos = mB2[1];
-    } else {
-      // Strategy 3: number after BULTOS
-      const mB3 = t.match(/[Bb][Uu][Ll][Tt][Oo][Ss]\s{0,4}(\d{1,3})/);
-      if(mB3) bultos = mB3[1];
-    }
-  }
-
-  return {code, pallet, bultos};
-}
+btnKey.addEventListener('click',()=>{
+  const val=inpKey.value.trim();
+  if(!val||val.startsWith('•')){ setStatus('Pegá una API key válida','err'); return; }
+  localStorage.setItem('gemini_key',val);
+  inpKey.value='••••••••••••••••';
+  keySaved.style.display='block';
+  setStatus('✓ API key guardada correctamente','ok');
+});
 
 // ── CAMERA ───────────────────────────────────────────────────────
 btnCam.addEventListener('click',async()=>{
   if(stream){
     stream.getTracks().forEach(t=>t.stop()); stream=null;
     video.style.display='none'; camIdle.style.display='flex';
-    finder.style.display='none'; scanLine.style.display='none'; finderHint.style.display='none';
+    finder.style.display='none'; scanLine.style.display='none';
     btnCam.textContent='Activar cámara'; btnCam.classList.remove('danger');
     btnScan.disabled=true; statusEl.style.display='none'; return;
   }
@@ -321,73 +246,127 @@ btnCam.addEventListener('click',async()=>{
       video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080} }
     });
     video.srcObject=stream; video.style.display='block'; camIdle.style.display='none';
-    finder.style.display='block'; scanLine.style.display='block'; finderHint.style.display='block';
+    finder.style.display='block'; scanLine.style.display='block';
     btnCam.textContent='✕ Detener'; btnCam.classList.add('danger');
     btnScan.disabled=false; statusEl.style.display='none';
-    initWorker();
   }catch(e){
     let msg='No se pudo acceder a la cámara.';
     if(e.name==='NotAllowedError') msg='Permiso denegado. Habilitá la cámara en Ajustes del navegador.';
-    if(e.name==='NotFoundError')   msg='No se encontró cámara en este dispositivo.';
     setStatus(msg,'err');
   }
 });
 
+// ── CAPTURE IMAGE as base64 JPEG ────────────────────────────────
+function captureBase64(quality=0.85){
+  cvs.width=video.videoWidth||1280; cvs.height=video.videoHeight||960;
+  ctx.drawImage(video,0,0);
+  // Strip the data:image/jpeg;base64, prefix
+  return cvs.toDataURL('image/jpeg',quality).split(',')[1];
+}
+
+// ── CALL GEMINI FLASH ────────────────────────────────────────────
+async function callGemini(base64Image){
+  const key=getKey();
+  if(!key) throw new Error('No hay API key guardada. Ingresala arriba.');
+
+  const prompt=`Sos un asistente de logística. Analizá esta foto de una etiqueta de pallet y extraé exactamente estos 3 datos:
+
+1. CODIGO: el código principal que aparece grande arriba. Tiene formato como "3111-70-JR-0500" o "3132-70-AR-1000" (números-números-letras-números separados por guiones). Copialo exactamente como aparece.
+
+2. PALLET: el número que aparece después de la palabra "Pallet". Es un número de 6 dígitos aproximadamente, como "109007" o "108974".
+
+3. BULTOS: el número que aparece antes o cerca de la palabra "BULTOS". Puede ser de 1 a 3 dígitos, como "55" o "120".
+
+Respondé ÚNICAMENTE en este formato JSON, sin texto adicional, sin explicaciones:
+{"codigo":"3111-70-JR-0500","pallet":"109007","bultos":"55"}
+
+Si no podés leer algún campo con certeza, poné null en ese campo.`;
+
+  const body={
+    contents:[{
+      parts:[
+        {text: prompt},
+        {inline_data:{mime_type:'image/jpeg',data:base64Image}}
+      ]
+    }],
+    generationConfig:{ temperature:0, maxOutputTokens:150 }
+  };
+
+  const res=await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+    { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
+  );
+
+  if(!res.ok){
+    const err=await res.json().catch(()=>({}));
+    const msg=err?.error?.message||`Error ${res.status}`;
+    if(res.status===400&&msg.includes('API_KEY')) throw new Error('API key inválida. Verificá que la copiaste bien.');
+    if(res.status===403) throw new Error('API key sin permisos. Activá "Generative Language API" en Google Cloud.');
+    if(res.status===429) throw new Error('Límite de requests alcanzado. Esperá unos segundos e intentá de nuevo.');
+    throw new Error(msg);
+  }
+
+  const data=await res.json();
+  const rawText=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+
+  // Parse JSON from response (strip markdown fences if present)
+  const clean=rawText.replace(/```json|```/gi,'').trim();
+  try{
+    return JSON.parse(clean);
+  }catch{
+    // Try to extract JSON object from text
+    const match=clean.match(/\{[\s\S]*?\}/);
+    if(match) return JSON.parse(match[0]);
+    throw new Error('Respuesta inesperada de la IA: '+rawText.slice(0,100));
+  }
+}
+
 // ── SCAN ─────────────────────────────────────────────────────────
 btnScan.addEventListener('click',async()=>{
   if(isScanning||!stream)return;
+  if(!getKey()){ setStatus('Primero guardá tu API key de Gemini arriba','err'); return; }
+
   isScanning=true; btnScan.disabled=true;
-  setStatus('Capturando imagen…','scan'); setProgress(10);
-
-  cvs.width=video.videoWidth||1280; cvs.height=video.videoHeight||960;
-  ctx.drawImage(video,0,0);
-
-  const enhanced=preprocess(cvs);
-  setProgress(30); setStatus('Analizando texto…','scan');
+  aiOverlay.style.display='flex'; aiStatusText.textContent='Capturando imagen…';
+  statusEl.style.display='none'; aiBox.style.display='none';
 
   try{
-    // Pass 1: standard enhancement
-    const {data:{text:t1,confidence:c1}} = await worker.recognize(enhanced);
+    const b64=captureBase64(0.9);
+    aiStatusText.textContent='Analizando con Gemini IA…';
 
-    let bestText=t1, bestConf=c1;
+    const start=Date.now();
+    const result=await callGemini(b64);
+    const elapsed=((Date.now()-start)/1000).toFixed(1);
 
-    // Pass 2: only if first pass confidence is poor (<55)
-    if(c1<55){
-      const sharp=document.createElement('canvas');
-      sharp.width=enhanced.width; sharp.height=enhanced.height;
-      const sc=sharp.getContext('2d');
-      sc.filter='grayscale(1) contrast(2.6) brightness(0.92)';
-      sc.drawImage(cvs,0,0,sharp.width,sharp.height);
-      const {data:{text:t2,confidence:c2}} = await worker.recognize(sharp);
-      if(c2>c1){bestText=t2; bestConf=c2;}
-    }
+    aiOverlay.style.display='none';
 
-    // Show raw text (collapsed by default)
-    ocrRaw.textContent=bestText.trim()||'(sin texto detectado)';
+    const code   = result.codigo  || result.code   || '';
+    const pallet = result.pallet  || '';
+    const bultos = result.bultos  || '';
 
-    const {code,pallet,bultos} = extractData(bestText);
-    const conf=Math.round(bestConf);
+    // Show AI response summary
+    aiBox.textContent=`IA respondió en ${elapsed}s`;
+    aiBox.style.display='block';
 
     function fill(el,inp,val){
-      if(val){el.textContent=val;el.classList.remove('empty');inp.value=val;}
+      const v=(val&&val!=='null')?String(val).trim():'';
+      if(v){el.textContent=v;el.classList.remove('empty');inp.value=v;}
       else{el.textContent='–';el.classList.add('empty');inp.value='';}
     }
-    fill(resCode,inpCode,code);
-    fill(resPallet,inpPallet,pallet);
-    fill(resBultos,inpBultos,bultos);
+    fill(resCode,   inpCode,   code);
+    fill(resPallet, inpPallet, pallet);
+    fill(resBultos, inpBultos, bultos);
 
-    const found=[code,pallet,bultos].filter(Boolean).length;
-    if(found===3)
-      setStatus(`✓ Todo detectado (confianza ${conf}%). Revisá y tocá ✓ para guardar.`,'ok');
-    else if(found>0)
-      setStatus(`${found}/3 campos detectados (confianza ${conf}%). Completá los faltantes.`,'scan');
-    else
-      setStatus('No se detectó texto. Acercate más o mejorá la iluminación.','err');
+    const found=[code,pallet,bultos].filter(v=>v&&v!=='null').length;
+    if(found===3)    setStatus(`✓ Todo detectado en ${elapsed}s. Revisá y guardá.`,'ok');
+    else if(found>0) setStatus(`${found}/3 campos detectados. Completá los faltantes a mano.`,'scan');
+    else             setStatus('La IA no detectó datos. Acercate más a la etiqueta.','err');
 
-    setProgress(0);
   }catch(e){
-    setStatus('Error OCR: '+e.message,'err'); setProgress(0);
+    aiOverlay.style.display='none';
+    setStatus('Error: '+e.message,'err');
   }
+
   isScanning=false; btnScan.disabled=false;
 });
 
@@ -402,12 +381,12 @@ btnSave.addEventListener('click',()=>{
   saveLocal(); renderTable();
   inpCode.value=''; inpPallet.value=''; inpBultos.value='';
   [resCode,resPallet,resBultos].forEach(el=>{el.textContent='–';el.classList.add('empty');});
-  ocrRaw.style.display='none'; ocrToggle.textContent='▶ Ver texto OCR crudo';
+  aiBox.style.display='none';
   setStatus(`✓ Guardado. Total: ${records.length} registro${records.length!==1?'s':''}.`,'ok');
 });
 
 function saveLocal(){
-  try{localStorage.setItem('etiquetas_v4',JSON.stringify(records.slice(0,1000)));}catch(e){}
+  try{localStorage.setItem('etiquetas_ia',JSON.stringify(records.slice(0,1000)));}catch(e){}
 }
 
 // ── TABLE ────────────────────────────────────────────────────────
