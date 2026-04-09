@@ -25,15 +25,20 @@
   .card { background: var(--card); border-radius: 14px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
   .card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text2); margin-bottom: 10px; }
 
-  /* API KEY SETUP */
+  /* API KEY */
   .setup-box { background: var(--blue-light); border-radius: 10px; padding: 12px 14px; }
   .setup-box p { font-size: 13px; color: var(--blue-text); margin-bottom: 8px; line-height: 1.5; }
   .key-row { display: flex; gap: 8px; }
   .key-row input { flex: 1; padding: 10px 12px; border-radius: 9px; border: 1.5px solid rgba(24,95,165,0.3); background: #fff; font-size: 13px; font-family: var(--mono); color: var(--text); -webkit-appearance: none; }
   .key-row input:focus { outline: none; border-color: var(--green); }
-  .key-btn { padding: 10px 14px; border-radius: 9px; background: var(--green); color: #fff; font-size: 13px; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; }
+  .key-btn { padding: 10px 14px; border-radius: 9px; background: var(--green); color: #fff; font-size: 13px; font-weight: 700; border: none; cursor: pointer; }
   .key-btn:active { background: var(--green-dark); }
   .key-saved { font-size: 11px; color: var(--green-text); background: var(--green-light); padding: 5px 10px; border-radius: 7px; margin-top: 6px; display: none; }
+
+  /* model selector */
+  .model-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .model-row label { font-size: 12px; color: var(--text2); white-space: nowrap; }
+  .model-row select { flex: 1; padding: 8px 10px; border-radius: 9px; border: 1.5px solid var(--border); background: #fafaf8; font-size: 12px; color: var(--text); -webkit-appearance: none; }
 
   /* CAMERA */
   #cam-wrap { position: relative; border-radius: 10px; overflow: hidden; background: #111; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; }
@@ -42,90 +47,91 @@
   .cam-idle { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #666; }
   .cam-idle svg { opacity: .35; }
   .cam-idle span { font-size: 13px; }
-  .finder { position: absolute; left: 4%; right: 4%; top: 22%; bottom: 22%; border: 2px solid rgba(29,158,117,.85); border-radius: 8px; display: none; pointer-events: none; }
+  .finder { position: absolute; left:4%; right:4%; top:22%; bottom:22%; border:2px solid rgba(29,158,117,.85); border-radius:8px; display:none; pointer-events:none; }
   .corner { position: absolute; width: 20px; height: 20px; }
   .corner-tl { top:-2px;left:-2px; border-top:3px solid #1D9E75;border-left:3px solid #1D9E75;border-radius:3px 0 0 0; }
   .corner-tr { top:-2px;right:-2px; border-top:3px solid #1D9E75;border-right:3px solid #1D9E75;border-radius:0 3px 0 0; }
   .corner-bl { bottom:-2px;left:-2px; border-bottom:3px solid #1D9E75;border-left:3px solid #1D9E75;border-radius:0 0 0 3px; }
   .corner-br { bottom:-2px;right:-2px; border-bottom:3px solid #1D9E75;border-right:3px solid #1D9E75;border-radius:0 0 3px 0; }
-  .scan-line { position: absolute; left:4%; right:4%; height:2px; background: linear-gradient(90deg,transparent,#1D9E75,transparent); display:none; animation: scanmove 2.2s ease-in-out infinite; }
+  .scan-line { position:absolute; left:4%; right:4%; height:2px; background:linear-gradient(90deg,transparent,#1D9E75,transparent); display:none; animation:scanmove 2.2s ease-in-out infinite; }
   @keyframes scanmove { 0%,100%{top:24%}50%{top:74%} }
+  .ai-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.55); display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px; border-radius:10px; }
+  .ai-overlay span { color:#fff; font-size:14px; font-weight:600; }
+  .spinner { width:36px; height:36px; border:3px solid rgba(255,255,255,0.2); border-top-color:#1D9E75; border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
 
-  /* AI thinking overlay */
-  .ai-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border-radius: 10px; }
-  .ai-overlay span { color: #fff; font-size: 14px; font-weight: 600; }
-  .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #1D9E75; border-radius: 50%; animation: spin .8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-row { display:flex; gap:8px; margin-top:10px; }
+  .btn { flex:1; padding:12px 8px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; border:1.5px solid var(--border); background:#f0f0ea; color:var(--text); -webkit-tap-highlight-color:transparent; }
+  .btn:active { transform:scale(.97); }
+  .btn.primary { background:var(--green); color:#fff; border-color:var(--green); }
+  .btn.primary:active { background:var(--green-dark); }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .btn.danger { background:var(--red-light); color:var(--red-text); border-color:transparent; }
 
-  /* buttons */
-  .btn-row { display: flex; gap: 8px; margin-top: 10px; }
-  .btn { flex: 1; padding: 12px 8px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); background: #f0f0ea; color: var(--text); -webkit-tap-highlight-color: transparent; }
-  .btn:active { transform: scale(.97); }
-  .btn.primary { background: var(--green); color: #fff; border-color: var(--green); }
-  .btn.primary:active { background: var(--green-dark); }
-  .btn:disabled { opacity: .4; cursor: not-allowed; }
-  .btn.danger { background: var(--red-light); color: var(--red-text); border-color: transparent; }
+  .status { font-size:12px; padding:8px 11px; border-radius:8px; margin-top:8px; display:none; font-weight:500; line-height:1.6; }
+  .status.scan { background:var(--amber-light); color:var(--amber-text); }
+  .status.ok   { background:var(--green-light);  color:var(--green-text); }
+  .status.err  { background:var(--red-light);    color:var(--red-text); }
 
-  .status { font-size: 12px; padding: 8px 11px; border-radius: 8px; margin-top: 8px; display: none; font-weight: 500; line-height: 1.5; }
-  .status.scan { background: var(--amber-light); color: var(--amber-text); }
-  .status.ok   { background: var(--green-light);  color: var(--green-text); }
-  .status.err  { background: var(--red-light);    color: var(--red-text); }
+  .res-grid { display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px; margin-bottom:10px; }
+  .res-lbl { font-size:10px; color:var(--text2); margin-bottom:4px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .res-val { font-family:var(--mono); font-size:15px; font-weight:700; background:#f5f5f0; padding:9px 10px; border-radius:8px; border:1px solid var(--border); min-height:42px; display:flex; align-items:center; color:var(--green-dark); word-break:break-all; }
+  .res-val.empty { font-size:11px; color:#bbb; font-family:inherit; font-weight:400; }
 
-  /* results */
-  .res-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-  .res-lbl { font-size: 10px; color: var(--text2); margin-bottom: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-  .res-val { font-family: var(--mono); font-size: 15px; font-weight: 700; background: #f5f5f0; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--border); min-height: 42px; display: flex; align-items: center; color: var(--green-dark); word-break: break-all; }
-  .res-val.empty { font-size: 11px; color: #bbb; font-family: inherit; font-weight: 400; }
+  .ai-box { font-size:12px; background:var(--blue-light); padding:8px 12px; border-radius:8px; color:var(--blue-text); line-height:1.6; display:none; margin-bottom:10px; }
 
-  /* AI response box */
-  .ai-box { font-size: 12px; background: var(--blue-light); padding: 8px 12px; border-radius: 8px; color: var(--blue-text); line-height: 1.6; display: none; margin-bottom: 10px; }
+  .manual-grid { display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:6px; margin-top:10px; }
+  .manual-grid input { padding:10px 8px; border-radius:9px; border:1.5px solid var(--border); background:#fafaf8; font-size:13px; font-family:var(--mono); color:var(--text); -webkit-appearance:none; width:100%; }
+  .manual-grid input:focus { outline:none; border-color:var(--green); }
+  .save-btn { padding:10px 14px; border-radius:9px; background:var(--green); color:#fff; font-size:15px; font-weight:700; border:none; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .save-btn:active { background:var(--green-dark); transform:scale(.97); }
 
-  /* manual entry */
-  .manual-grid { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 6px; margin-top: 10px; }
-  .manual-grid input { padding: 10px 8px; border-radius: 9px; border: 1.5px solid var(--border); background: #fafaf8; font-size: 13px; font-family: var(--mono); color: var(--text); -webkit-appearance: none; width: 100%; }
-  .manual-grid input:focus { outline: none; border-color: var(--green); }
-  .save-btn { padding: 10px 14px; border-radius: 9px; background: var(--green); color: #fff; font-size: 15px; font-weight: 700; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .save-btn:active { background: var(--green-dark); transform: scale(.97); }
-
-  /* table */
-  .table-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .table-header .card-label { margin: 0; }
-  .tbl-actions { display: flex; gap: 6px; }
-  .tbl-btn { padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1.5px solid var(--border); background: #f0f0ea; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .tbl-btn.export { background: var(--green); color: #fff; border-color: var(--green); }
-  .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th { background: #f5f5f0; padding: 7px 8px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text2); border-bottom: 1px solid var(--border); white-space: nowrap; }
-  td { padding: 8px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 12px; }
-  tr:last-child td { border-bottom: none; }
-  tr.new-row td { background: #EAF3DE; animation: faderow 2s forwards; }
-  @keyframes faderow { to { background: transparent; } }
-  .empty-msg { text-align: center; padding: 20px; color: var(--text2); font-size: 13px; font-family: inherit; }
-  footer { text-align: center; padding: 16px 12px 28px; font-size: 11px; color: #bbb; }
+  .table-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .table-header .card-label { margin:0; }
+  .tbl-actions { display:flex; gap:6px; }
+  .tbl-btn { padding:5px 12px; border-radius:8px; font-size:12px; font-weight:600; border:1.5px solid var(--border); background:#f0f0ea; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .tbl-btn.export { background:var(--green); color:#fff; border-color:var(--green); }
+  .tbl-wrap { overflow-x:auto; border-radius:8px; border:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { background:#f5f5f0; padding:7px 8px; text-align:left; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  td { padding:8px; border-bottom:1px solid var(--border); font-family:var(--mono); font-size:12px; }
+  tr:last-child td { border-bottom:none; }
+  tr.new-row td { background:#EAF3DE; animation:faderow 2s forwards; }
+  @keyframes faderow { to { background:transparent; } }
+  .empty-msg { text-align:center; padding:20px; color:var(--text2); font-size:13px; font-family:inherit; }
+  footer { text-align:center; padding:16px 12px 28px; font-size:11px; color:#bbb; }
 </style>
 </head>
 <body>
 
 <header>
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-    <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
-    <path d="M12 8v4l3 3"/>
+    <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
   </svg>
-  <div><h1>Escáner IA de Etiquetas</h1><p>Gemini Flash Vision · Código · Pallet · Bultos</p></div>
+  <div><h1>Escáner IA de Etiquetas</h1><p>Gemini Vision · Código · Pallet · Bultos</p></div>
 </header>
 
 <main>
 
   <!-- API KEY -->
-  <div class="card" id="card-key">
-    <div class="card-label">🔑 API Key de Gemini</div>
+  <div class="card">
+    <div class="card-label">🔑 Configuración</div>
     <div class="setup-box">
-      <p>Pegá tu API key de Google AI Studio. Se guarda en el dispositivo y no se comparte con nadie.</p>
+      <p>Pegá tu API key de <strong>aistudio.google.com</strong> → Get API key → Create API key.</p>
       <div class="key-row">
         <input type="password" id="inp-key" placeholder="AIzaSy...">
         <button class="key-btn" id="btn-key">Guardar</button>
       </div>
       <div class="key-saved" id="key-saved">✓ API key guardada</div>
+    </div>
+    <div class="model-row">
+      <label>Modelo:</label>
+      <select id="sel-model">
+        <option value="gemini-1.5-flash">gemini-1.5-flash (recomendado, gratis)</option>
+        <option value="gemini-1.5-flash-8b">gemini-1.5-flash-8b (más rápido)</option>
+        <option value="gemini-2.0-flash">gemini-2.0-flash (más nuevo)</option>
+        <option value="gemini-1.5-pro">gemini-1.5-pro (más preciso)</option>
+      </select>
     </div>
   </div>
 
@@ -194,7 +200,7 @@
   </div>
 
 </main>
-<footer>API key guardada localmente · Datos nunca salen del dispositivo</footer>
+<footer>API key guardada solo en tu dispositivo</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
@@ -206,29 +212,36 @@ const video=$('video'), cvs=$('canvas-hidden'), ctx=cvs.getContext('2d');
 const btnCam=$('btn-cam'), btnScan=$('btn-scan'), btnSave=$('btn-save');
 const btnClear=$('btn-clear'), btnExport=$('btn-export');
 const resCode=$('res-code'), resPallet=$('res-pallet'), resBultos=$('res-bultos');
-const statusEl=$('status'), aiBox=$('ai-box'), aiOverlay=$('ai-overlay'), aiStatusText=$('ai-status-text');
+const statusEl=$('status'), aiBox=$('ai-box');
+const aiOverlay=$('ai-overlay'), aiStatusText=$('ai-status-text');
 const inpCode=$('inp-code'), inpPallet=$('inp-pallet'), inpBultos=$('inp-bultos');
 const tbody=$('tbody'), count=$('count');
 const finder=$('finder'), scanLine=$('scan-line'), camIdle=$('cam-idle');
 const inpKey=$('inp-key'), btnKey=$('btn-key'), keySaved=$('key-saved');
+const selModel=$('sel-model');
 
 function setStatus(msg,type){statusEl.textContent=msg;statusEl.className='status '+type;statusEl.style.display='block';}
 
 // ── API KEY ──────────────────────────────────────────────────────
 function getKey(){ return localStorage.getItem('gemini_key')||''; }
+function getModel(){ return localStorage.getItem('gemini_model')||'gemini-1.5-flash'; }
 
-(function initKey(){
+(function init(){
   const k=getKey();
   if(k){ inpKey.value='••••••••••••••••'; keySaved.style.display='block'; }
+  const m=getModel();
+  selModel.value=m;
+  selModel.addEventListener('change',()=>localStorage.setItem('gemini_model',selModel.value));
 })();
 
 btnKey.addEventListener('click',()=>{
   const val=inpKey.value.trim();
-  if(!val||val.startsWith('•')){ setStatus('Pegá una API key válida','err'); return; }
+  if(!val||val.startsWith('•')){ setStatus('Pegá una API key válida (empieza con AIza…)','err'); return; }
+  if(!val.startsWith('AIza')){ setStatus('Esa no parece una API key de Google. Debe empezar con "AIza"','err'); return; }
   localStorage.setItem('gemini_key',val);
   inpKey.value='••••••••••••••••';
   keySaved.style.display='block';
-  setStatus('✓ API key guardada correctamente','ok');
+  setStatus('✓ API key guardada','ok');
 });
 
 // ── CAMERA ───────────────────────────────────────────────────────
@@ -256,83 +269,97 @@ btnCam.addEventListener('click',async()=>{
   }
 });
 
-// ── CAPTURE IMAGE as base64 JPEG ────────────────────────────────
-function captureBase64(quality=0.85){
+// ── CAPTURE ──────────────────────────────────────────────────────
+function captureBase64(){
   cvs.width=video.videoWidth||1280; cvs.height=video.videoHeight||960;
   ctx.drawImage(video,0,0);
-  // Strip the data:image/jpeg;base64, prefix
-  return cvs.toDataURL('image/jpeg',quality).split(',')[1];
+  return cvs.toDataURL('image/jpeg',0.9).split(',')[1];
 }
 
-// ── CALL GEMINI FLASH ────────────────────────────────────────────
-async function callGemini(base64Image){
+// ── CALL GEMINI ──────────────────────────────────────────────────
+async function callGemini(b64){
   const key=getKey();
   if(!key) throw new Error('No hay API key guardada. Ingresala arriba.');
 
-  const prompt=`Sos un asistente de logística. Analizá esta foto de una etiqueta de pallet y extraé exactamente estos 3 datos:
+  const model=getModel();
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
 
-1. CODIGO: el código principal que aparece grande arriba. Tiene formato como "3111-70-JR-0500" o "3132-70-AR-1000" (números-números-letras-números separados por guiones). Copialo exactamente como aparece.
+  const prompt=`Sos un asistente de logística en Argentina. Mirá esta foto de una etiqueta de pallet y extraé exactamente estos 3 datos:
 
-2. PALLET: el número que aparece después de la palabra "Pallet". Es un número de 6 dígitos aproximadamente, como "109007" o "108974".
+1. CODIGO: el código principal que aparece en grande arriba. Tiene este formato exacto: NNNN-NN-XX-NNNN (números-números-letras mayúsculas-números separados por guiones). Ejemplos: "3111-70-JR-0500", "3132-70-AR-1000". Copialo exactamente.
 
-3. BULTOS: el número que aparece antes o cerca de la palabra "BULTOS". Puede ser de 1 a 3 dígitos, como "55" o "120".
+2. PALLET: el número de 5 a 7 dígitos que aparece después de la palabra "Pallet". Ejemplos: "109007", "108974".
 
-Respondé ÚNICAMENTE en este formato JSON, sin texto adicional, sin explicaciones:
-{"codigo":"3111-70-JR-0500","pallet":"109007","bultos":"55"}
+3. BULTOS: el número de 1 a 3 dígitos que aparece antes o cerca de la palabra "BULTOS". Puede ser algo como "55" o "120".
 
-Si no podés leer algún campo con certeza, poné null en ese campo.`;
+Respondé SOLO con este JSON, sin texto extra, sin markdown:
+{"codigo":"XXXX-XX-XX-XXXX","pallet":"NNNNNN","bultos":"NN"}
+
+Si no podés leer un campo con certeza, usá null para ese campo.`;
 
   const body={
-    contents:[{
-      parts:[
-        {text: prompt},
-        {inline_data:{mime_type:'image/jpeg',data:base64Image}}
-      ]
-    }],
-    generationConfig:{ temperature:0, maxOutputTokens:150 }
+    contents:[{ parts:[
+      {text:prompt},
+      {inline_data:{mime_type:'image/jpeg',data:b64}}
+    ]}],
+    generationConfig:{ temperature:0, maxOutputTokens:120 }
   };
 
-  const res=await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-    { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
-  );
+  const res=await fetch(url,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
 
+  // Parse error details
   if(!res.ok){
-    const err=await res.json().catch(()=>({}));
-    const msg=err?.error?.message||`Error ${res.status}`;
-    if(res.status===400&&msg.includes('API_KEY')) throw new Error('API key inválida. Verificá que la copiaste bien.');
-    if(res.status===403) throw new Error('API key sin permisos. Activá "Generative Language API" en Google Cloud.');
-    if(res.status===429) throw new Error('Límite de requests alcanzado. Esperá unos segundos e intentá de nuevo.');
-    throw new Error(msg);
+    let errMsg=`Error HTTP ${res.status}`;
+    try{
+      const errData=await res.json();
+      const detail=errData?.error?.message||'';
+      const status=errData?.error?.status||'';
+
+      if(res.status===400&&detail.toLowerCase().includes('api key')) errMsg='API key inválida. Verificá que la copiaste completa desde AI Studio.';
+      else if(res.status===403) errMsg='API key sin permisos. En AI Studio verificá que la key esté activa.';
+      else if(res.status===429){
+        if(detail.includes('quota')||status==='RESOURCE_EXHAUSTED')
+          errMsg=`Cuota agotada con ${model}. Probá cambiar el modelo a "gemini-1.5-flash-8b" en la configuración de arriba.`;
+        else
+          errMsg='Demasiadas requests seguidas. Esperá 10 segundos e intentá de nuevo.';
+      }
+      else if(res.status===404) errMsg=`El modelo "${model}" no está disponible con tu plan. Cambiá a "gemini-1.5-flash" arriba.`;
+      else errMsg=detail||errMsg;
+    }catch{}
+    throw new Error(errMsg);
   }
 
   const data=await res.json();
   const rawText=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+  if(!rawText) throw new Error('La IA no devolvió respuesta. Intentá de nuevo.');
 
-  // Parse JSON from response (strip markdown fences if present)
+  // Extract JSON
   const clean=rawText.replace(/```json|```/gi,'').trim();
-  try{
-    return JSON.parse(clean);
-  }catch{
-    // Try to extract JSON object from text
+  try{ return JSON.parse(clean); }
+  catch{
     const match=clean.match(/\{[\s\S]*?\}/);
     if(match) return JSON.parse(match[0]);
-    throw new Error('Respuesta inesperada de la IA: '+rawText.slice(0,100));
+    throw new Error('Respuesta inesperada de la IA. Intentá de nuevo.');
   }
 }
 
 // ── SCAN ─────────────────────────────────────────────────────────
 btnScan.addEventListener('click',async()=>{
   if(isScanning||!stream)return;
-  if(!getKey()){ setStatus('Primero guardá tu API key de Gemini arriba','err'); return; }
+  const key=getKey();
+  if(!key){ setStatus('Primero guardá tu API key de Gemini arriba','err'); return; }
 
   isScanning=true; btnScan.disabled=true;
   aiOverlay.style.display='flex'; aiStatusText.textContent='Capturando imagen…';
   statusEl.style.display='none'; aiBox.style.display='none';
 
   try{
-    const b64=captureBase64(0.9);
-    aiStatusText.textContent='Analizando con Gemini IA…';
+    const b64=captureBase64();
+    aiStatusText.textContent=`Analizando con ${getModel()}…`;
 
     const start=Date.now();
     const result=await callGemini(b64);
@@ -340,12 +367,11 @@ btnScan.addEventListener('click',async()=>{
 
     aiOverlay.style.display='none';
 
-    const code   = result.codigo  || result.code   || '';
-    const pallet = result.pallet  || '';
-    const bultos = result.bultos  || '';
+    const code   = result.codigo||result.code||'';
+    const pallet = result.pallet||'';
+    const bultos = result.bultos||'';
 
-    // Show AI response summary
-    aiBox.textContent=`IA respondió en ${elapsed}s`;
+    aiBox.textContent=`IA (${getModel()}) respondió en ${elapsed}s`;
     aiBox.style.display='block';
 
     function fill(el,inp,val){
@@ -358,13 +384,13 @@ btnScan.addEventListener('click',async()=>{
     fill(resBultos, inpBultos, bultos);
 
     const found=[code,pallet,bultos].filter(v=>v&&v!=='null').length;
-    if(found===3)    setStatus(`✓ Todo detectado en ${elapsed}s. Revisá y guardá.`,'ok');
+    if(found===3)    setStatus(`✓ Todo detectado en ${elapsed}s. Revisá y guardá con ✓.`,'ok');
     else if(found>0) setStatus(`${found}/3 campos detectados. Completá los faltantes a mano.`,'scan');
     else             setStatus('La IA no detectó datos. Acercate más a la etiqueta.','err');
 
   }catch(e){
     aiOverlay.style.display='none';
-    setStatus('Error: '+e.message,'err');
+    setStatus(e.message,'err');
   }
 
   isScanning=false; btnScan.disabled=false;
@@ -385,11 +411,8 @@ btnSave.addEventListener('click',()=>{
   setStatus(`✓ Guardado. Total: ${records.length} registro${records.length!==1?'s':''}.`,'ok');
 });
 
-function saveLocal(){
-  try{localStorage.setItem('etiquetas_ia',JSON.stringify(records.slice(0,1000)));}catch(e){}
-}
+function saveLocal(){try{localStorage.setItem('etiquetas_ia',JSON.stringify(records.slice(0,1000)));}catch(e){}}
 
-// ── TABLE ────────────────────────────────────────────────────────
 function renderTable(){
   count.textContent=`(${records.length})`;
   if(!records.length){tbody.innerHTML='<tr><td colspan="5" class="empty-msg">Sin registros aún</td></tr>';return;}
@@ -409,13 +432,9 @@ btnClear.addEventListener('click',()=>{
   records.length=0; saveLocal(); renderTable(); setStatus('Registros eliminados','err');
 });
 
-// ── EXPORT ───────────────────────────────────────────────────────
 btnExport.addEventListener('click',()=>{
   if(!records.length){setStatus('No hay registros para exportar','err');return;}
-  const rows=[
-    ['Código','Pallet','Bultos','Fecha y Hora'],
-    ...records.map(r=>[r.code,r.pallet,r.bultos||'',r.fecha])
-  ];
+  const rows=[['Código','Pallet','Bultos','Fecha y Hora'],...records.map(r=>[r.code,r.pallet,r.bultos||'',r.fecha])];
   const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:20},{wch:12},{wch:8},{wch:22}];
   XLSX.utils.book_append_sheet(wb,ws,'Escaneos');
